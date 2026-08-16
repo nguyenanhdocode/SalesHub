@@ -1,4 +1,5 @@
 using Application.Features.GoodsReceipts.Create;
+using Application.Features.GoodsReceipts.Get;
 using Application.Features.GoodsReceipts.List;
 using Application.Features.GoodsReceipts.Update;
 using MediatR;
@@ -47,6 +48,16 @@ namespace MyApp.Namespace
             var data = await _sender.Send(command, cancellationToken);
 
             return Results.Ok(data);
+        }
+
+        [HttpGet]
+        [Authorize]
+        [Route("{documentId}")]
+        public async Task<IResult> Get(Guid documentId, CancellationToken cancellationToken)
+        {
+            var row = await _sender.Send(new GetGoodsReceiptQuery { DocumentId = documentId }, cancellationToken);
+
+            return Results.Ok(row);
         }
     }
 }
