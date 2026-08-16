@@ -1,4 +1,5 @@
 using Application.Features.GoodsReceipts.Create;
+using Application.Features.GoodsReceipts.List;
 using Application.Features.GoodsReceipts.Update;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -37,6 +38,15 @@ namespace MyApp.Namespace
             await _sender.Send(command, cancellationToken);
 
             return Results.Ok();
+        }
+
+        [HttpGet]
+        [Authorize]
+        public async Task<IResult> List([FromQuery] ListGoodsReceiptsQuery command, CancellationToken cancellationToken)
+        {
+            var data = await _sender.Send(command, cancellationToken);
+
+            return Results.Ok(data);
         }
     }
 }
