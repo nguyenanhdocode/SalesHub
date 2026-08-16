@@ -1,0 +1,29 @@
+using Application.Features.GoodsReceipts.Create;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
+namespace MyApp.Namespace
+{
+    [Route("api/goods-receipts")]
+    [ApiController]
+    public class GoodsReceiptsController : ControllerBase
+    {
+        private readonly ISender _sender;
+
+        public GoodsReceiptsController(ISender sender)
+        {
+            _sender = sender;
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IResult> Create(CreateGoodsReceiptCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _sender.Send(command, cancellationToken);
+
+            return Results.Ok(result);
+        }
+    }
+}
