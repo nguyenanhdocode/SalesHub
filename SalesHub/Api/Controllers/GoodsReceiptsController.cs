@@ -1,4 +1,5 @@
 using Application.Features.GoodsReceipts.Create;
+using Application.Features.GoodsReceipts.Update;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -24,6 +25,18 @@ namespace MyApp.Namespace
             var result = await _sender.Send(command, cancellationToken);
 
             return Results.Ok(result);
+        }
+
+        [HttpPut]
+        [Route("{documentId}")]
+        [Authorize]
+        public async Task<IResult> Update(string documentId, [FromBody] UpdateGoodsReceiptCommand command
+        , CancellationToken cancellationToken)
+        {
+            command.DocumentId = Guid.Parse(documentId);
+            await _sender.Send(command, cancellationToken);
+
+            return Results.Ok();
         }
     }
 }

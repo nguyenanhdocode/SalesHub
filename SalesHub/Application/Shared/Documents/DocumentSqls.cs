@@ -27,6 +27,18 @@ public class DocumentSqls
     );
     ";
 
+    public const string UPDATE_DOCUMENT_SQL = @"
+    UPDATE public.documents
+	SET posting_date=@PostingDate
+    , document_date=@DocumentDate
+    , period_id=@PeriodId
+    , updated_date=CURRENT_TIMESTAMP
+    , updated_by=@UpdatedBy
+    , note=@Note
+    , status=@Status
+	WHERE document_id = @DocumentId;
+    ";
+
     public const string MERGE_BALANCES_SQL = @"
     INSERT INTO public.inventory_balances AS ib(
           warehouse_id
