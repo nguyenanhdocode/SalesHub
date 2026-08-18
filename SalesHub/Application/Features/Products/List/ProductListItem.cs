@@ -1,6 +1,6 @@
 namespace Application.Features.Products.List;
 
-public class ProductDto
+public class ProductListItem
 {
     public int ProductId {get;set;}
     public string InternalCode {get;set;} = null!;

@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Application.Features.Products.List;
 
-public class ListProductHandler : IRequestHandler<ListProductQuery, PagedResult<ProductDto>>
+public class ListProductHandler : IRequestHandler<ListProductQuery, PagedResult<ProductListItem>>
 {
     private readonly DbSession _dbSession;
     public ListProductHandler(DbSession dbSession)
@@ -38,7 +38,7 @@ public class ListProductHandler : IRequestHandler<ListProductQuery, PagedResult<
     SELECT COUNT(1) FROM products WHERE 1=1
     ";
 
-    public async Task<PagedResult<ProductDto>> Handle(ListProductQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<ProductListItem>> Handle(ListProductQuery request, CancellationToken cancellationToken)
     {
         var filterQueryBuilder = new StringBuilder();
         var parameters = new DynamicParameters();
@@ -97,8 +97,8 @@ public class ListProductHandler : IRequestHandler<ListProductQuery, PagedResult<
         parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
         parameters.Add("PageSize", request.PageSize);
 
-        var data = await _dbSession.Connection.QueryAsync<ProductDto>(dataQueryBuilder.ToString(), parameters);
+        var data = await _dbSession.Connection.QueryAsync<ProductListItem>(dataQueryBuilder.ToString(), parameters);
 
-        return new PagedResult<ProductDto>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<ProductListItem>(data, totalPages, request.PageNum, request.PageSize);
     }
 }

@@ -7,13 +7,12 @@ using MediatR;
 
 namespace Application.Features.Products.List;
 
-public class ListProductQuery : IRequest<PagedResult<ProductDto>>, IPaginable, ITransactionalRequest
+public class ListProductQuery : IRequest<PagedResult<ProductListItem>>, IPaginable, ITransactionalRequest
 {
     public int? ProductId {get;set;}
     public string? InternalCode {get;set;}
     public string? ExternalCode {get;set;}
     public string? Name {get;set;} = null!;
-    // public string? CostingMethod {get;set;}
     public List<int>? BaseUnitIds {get;set;}
     public bool? Active {get;set;}
     public int? SupplierId {get;set;}

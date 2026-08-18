@@ -1,13 +1,11 @@
 using System.Data;
 using Application.Interfaces.Database;
-using Application.Models.Common;
 using MediatR;
 
-namespace Application.Features.Products.Get;
+namespace Application.Features.Products.UnitConversions.List;
 
-public class GetProductQuery : IRequest<ProductDto>, ITransactionalRequest
+public class ListUnitConversionsQuery : IRequest<IEnumerable<UnitConversionListItem>>, ITransactionalRequest
 {
     public int ProductId {get;set;}
-
     IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }

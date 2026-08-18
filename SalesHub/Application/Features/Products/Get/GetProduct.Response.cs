@@ -1,6 +1,6 @@
 namespace Application.Features.Products.Get;
 
-public class ProductDto
+public class GetProductResponse
 {
     public int ProductId { get; set; }
     public string InternalCode { get; set; } = null!;
@@ -12,5 +12,5 @@ public class ProductDto
     public bool Active { get; set; }
     public int SupplierId { get; set; }
     public string SupplierName { get; set; } = null!;
-    public IEnumerable<UnitDto> Units {get;set;} = [];
+    public IEnumerable<UnitResponse> Units {get;set;} = [];
 }

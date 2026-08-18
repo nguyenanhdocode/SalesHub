@@ -1,12 +1,11 @@
 using Application.Database;
 using Application.Exceptions;
-using Application.Models.Common;
 using Dapper;
 using MediatR;
 
 namespace Application.Features.Products.Get;
 
-public class GetProductHandler : IRequestHandler<GetProductQuery, ProductDto>
+public class GetProductHandler : IRequestHandler<GetProductQuery, GetProductResponse>
 {
     private readonly DbSession _dbSession;
     public GetProductHandler(DbSession dbSession)
@@ -43,9 +42,9 @@ public class GetProductHandler : IRequestHandler<GetProductQuery, ProductDto>
     WHERE product_unit.product_id = @ProductId;
     ";
 
-    public async Task<ProductDto> Handle(GetProductQuery request, CancellationToken cancellationToken)
+    public async Task<GetProductResponse> Handle(GetProductQuery request, CancellationToken cancellationToken)
     {
-        var product = await _dbSession.Connection.QuerySingleOrDefaultAsync<ProductDto>(GET_QUERY, new
+        var product = await _dbSession.Connection.QuerySingleOrDefaultAsync<GetProductResponse>(GET_QUERY, new
         {
             ProductId = request.ProductId
         });
@@ -55,7 +54,7 @@ public class GetProductHandler : IRequestHandler<GetProductQuery, ProductDto>
             throw new BusinessException("notfound");
         }
 
-        var units = await _dbSession.Connection.QueryAsync<UnitDto>(GET_UNITS_QUERY, new
+        var units = await _dbSession.Connection.QueryAsync<UnitResponse>(GET_UNITS_QUERY, new
         {
             ProductId = request.ProductId
         });

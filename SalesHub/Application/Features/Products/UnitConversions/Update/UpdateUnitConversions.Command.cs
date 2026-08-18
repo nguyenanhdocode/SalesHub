@@ -7,7 +7,7 @@ namespace Application.Features.Products.UnitConversions.Update;
 public class UpdateUnitConversionsCommand : IRequest, ITransactionalRequest
 {
     public int ProductId {get;set;}
-    public List<UnitConversionDto> Conversions {get;set;} = [];
+    public List<UnitConversionInput> Conversions {get;set;} = [];
 
     public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
 }

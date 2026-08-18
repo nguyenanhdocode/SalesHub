@@ -1,6 +1,6 @@
 namespace Application.Features.Products.UnitConversions.List;
 
-public class UnitConversionDto
+public class UnitConversionListItem
 {
     public int SrcUnitId {get;set;}
     public string SrcUnitName {get;set;} = null!;

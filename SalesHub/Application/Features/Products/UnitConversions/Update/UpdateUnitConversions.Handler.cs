@@ -41,7 +41,7 @@ public class UpdateUnitConversionsHandler : IRequestHandler<UpdateUnitConversion
 
     public async Task Handle(UpdateUnitConversionsCommand request, CancellationToken cancellationToken)
     {
-        var dbUnits = await _dbSession.Connection.QueryAsync<UnitConversionDto>(GET_UNIT_CONVERSIONS_BY_PRODUCT_ID_QUERY
+        var dbUnits = await _dbSession.Connection.QueryAsync<UnitConversionInput>(GET_UNIT_CONVERSIONS_BY_PRODUCT_ID_QUERY
                         , new
                         {
                             ProductId = request.ProductId

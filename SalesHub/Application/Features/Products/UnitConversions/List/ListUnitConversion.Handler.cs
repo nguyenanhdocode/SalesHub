@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Application.Features.Products.UnitConversions.List;
 
-public class ListUnitConversionsHandler : IRequestHandler<ListUnitConversionsQuery, IEnumerable<UnitConversionDto>>
+public class ListUnitConversionsHandler : IRequestHandler<ListUnitConversionsQuery, IEnumerable<UnitConversionListItem>>
 {
     private readonly DbSession _dbSession;
     public ListUnitConversionsHandler(DbSession dbSession)
@@ -25,9 +25,9 @@ public class ListUnitConversionsHandler : IRequestHandler<ListUnitConversionsQue
     WHERE unit_conversions.product_id = @ProductId;
     ";
 
-    public async Task<IEnumerable<UnitConversionDto>> Handle(ListUnitConversionsQuery request, CancellationToken cancellationToken)
+    public async Task<IEnumerable<UnitConversionListItem>> Handle(ListUnitConversionsQuery request, CancellationToken cancellationToken)
     {
-        var units = await _dbSession.Connection.QueryAsync<UnitConversionDto>(LIST_SQL, new
+        var units = await _dbSession.Connection.QueryAsync<UnitConversionListItem>(LIST_SQL, new
         {
             ProductId = request.ProductId
         });

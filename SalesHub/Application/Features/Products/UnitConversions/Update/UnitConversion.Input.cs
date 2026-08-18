@@ -1,5 +1,5 @@
 namespace Application.Features.Products.UnitConversions.Update;
-public class UnitConversionDto
+public class UnitConversionInput
 {
     public int SrcUnitId {get;set;}
     public int DstUnitId {get;set;}
