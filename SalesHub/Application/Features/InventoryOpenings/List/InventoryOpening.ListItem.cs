@@ -1,6 +1,6 @@
 namespace Application.Features.InventoryOpenings.List;
 
-public class InventoryOpeningDto
+public class InventoryOpeningListItem
 {
     public Guid DocumentId {get;set;}
     public string DocumentNo {get;set;} = null!;

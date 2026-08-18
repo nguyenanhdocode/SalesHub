@@ -1,6 +1,7 @@
 using Application.Database;
 using Application.Exceptions;
 using Application.Services;
+using Application.Shared;
 using Dapper;
 using Infrastructure.Security;
 using MediatR;
@@ -81,15 +82,6 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
     SELECT warehouse_id FROM inventory_openings WHERE document_id = @DocumentId;
     ";
 
-    const string MERGE_INVENTORY_BALANCE_SQL = @"
-    INSERT INTO inventory_balances
-    (warehouse_id, product_id, unit_id, quantity, amount)
-    VALUES (@WarehouseId, @ProductId, @UnitId, @Quantity, @Amount)
-    ON CONFLICT (warehouse_id, product_id, unit_id)
-    DO UPDATE
-    SET quantity = @Quantity, amount = @Amount;
-    ";
-
     public async Task Handle(UpdateInventoryOpeningCommand request, CancellationToken cancellationToken)
     {
         bool hasDocs = await _dbSession.Connection.ExecuteScalarAsync<bool>(CHECK_HAS_DOCS_SQL, new
@@ -108,43 +100,19 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
             Note = request.Note
         }, _dbSession.Transaction);
 
-        var dbLines = await _dbSession.Connection.QueryAsync<InventoryOpeningLineDto>(GET_LINES_SQL, new
+        var dbLines = await _dbSession.Connection.QueryAsync<InventoryOpeningLineRow>(GET_LINES_SQL, new
         {
             DocumentId = request.DocumentId
         }, _dbSession.Transaction);
 
         var deleteLines = dbLines.ExceptBy(request.Lines.Select(p => (p.ProductId, p.UnitId))
-            , p => (p.ProductId, p.UnitId))
-            .Select(p => new
-            {
-                DocumentId = request.DocumentId,
-                ProductId = p.ProductId,
-                UnitId = p.UnitId
-            }).ToList();
+            , p => (p.ProductId, p.UnitId)).ToList();
 
         var insertLines = request.Lines.ExceptBy(dbLines.Select(p => (p.ProductId, p.UnitId))
-            , p => (p.ProductId, p.UnitId))
-            .Select(p => new
-            {
-                ProductId = p.ProductId,
-                UnitId = p.UnitId,
-                Quantity = p.Quantity,
-                Amount = p.Amount,
-                SortOrder = p.SortOrder,
-                DocumentId = request.DocumentId
-            }).ToList();
+            , p => (p.ProductId, p.UnitId));
 
         var updateLines = request.Lines.IntersectBy(dbLines.Select(p => (p.ProductId, p.UnitId))
-            , p => (p.ProductId, p.UnitId))
-            .Select(p => new
-            {
-                ProductId = p.ProductId,
-                UnitId = p.UnitId,
-                Quantity = p.Quantity,
-                Amount = p.Amount,
-                SortOrder = p.SortOrder,
-                DocumentId = request.DocumentId
-            }).ToList();
+            , p => (p.ProductId, p.UnitId)).ToList();
 
         if (deleteLines.Any())
         {
@@ -175,6 +143,7 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
             Amount = p.Amount,
         });
 
-        await _dbSession.Connection.ExecuteAsync(MERGE_INVENTORY_BALANCE_SQL, balances, _dbSession.Transaction);
+        await _dbSession.Connection.ExecuteAsync(InventoryBalanceSqls.UPSERT_INVENTORY_BALANCE_SQL
+            , balances, _dbSession.Transaction);
     }
 }

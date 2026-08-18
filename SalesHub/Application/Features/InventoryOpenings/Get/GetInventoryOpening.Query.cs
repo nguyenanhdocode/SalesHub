@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Application.Features.InventoryOpenings.Get;
 
-public class GetInventoryOpeningQuery : IRequest<InventoryOpeningDto>, ITransactionalRequest
+public class GetInventoryOpeningQuery : IRequest<GetInventoryOpeningResponse>, ITransactionalRequest
 {
     public Guid DocumentId {get;set;}
 

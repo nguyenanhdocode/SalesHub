@@ -7,7 +7,7 @@ using MediatR;
 
 namespace Application.Features.InventoryOpenings.List;
 
-public class ListInventoryOpeningQuery : IRequest<PagedResult<InventoryOpeningDto>>, IPaginable
+public class ListInventoryOpeningQuery : IRequest<PagedResult<InventoryOpeningListItem>>, IPaginable
     , ITransactionalRequest
 {
     public string? DocumentNo {get;set;}

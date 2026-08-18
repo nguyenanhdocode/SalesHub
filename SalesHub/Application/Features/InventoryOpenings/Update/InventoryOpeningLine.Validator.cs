@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace Application.Features.InventoryOpenings.Update;
 
-public class InventoryOpeningLineValidator : AbstractValidator<InventoryOpeningLineDto>
+public class InventoryOpeningLineValidator : AbstractValidator<InventoryOpeningLineInput>
 {
     public InventoryOpeningLineValidator()
     {

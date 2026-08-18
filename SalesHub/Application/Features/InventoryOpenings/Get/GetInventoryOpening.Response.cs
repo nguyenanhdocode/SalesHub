@@ -1,6 +1,6 @@
 namespace Application.Features.InventoryOpenings.Get;
 
-public class InventoryOpeningDto
+public class GetInventoryOpeningResponse
 {
     public Guid DocumentId {get;set;}
     public string DocumentNo {get;set;} = null!;
@@ -20,5 +20,5 @@ public class InventoryOpeningDto
     public string? UpdatedUserName {get;set;} = null!;
     public DateTime? UpdatedAt {get;set;}
     public string? Note {get;set;}
-    public List<InventoryOpeningLineDto> Lines {get;set;} = [];
+    public List<GetInventoryOpeningLineResponse> Lines {get;set;} = [];
 }

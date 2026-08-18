@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Features.InventoryOpenings.Get;
 
-public class GetInventoryOpeningHandler : IRequestHandler<GetInventoryOpeningQuery, InventoryOpeningDto>
+public class GetInventoryOpeningHandler : IRequestHandler<GetInventoryOpeningQuery, GetInventoryOpeningResponse>
 {
     private readonly DbSession _dbSession;
     public GetInventoryOpeningHandler(DbSession dbSession)
@@ -59,9 +59,9 @@ public class GetInventoryOpeningHandler : IRequestHandler<GetInventoryOpeningQue
     WHERE inventory_opening_lines.document_id = @DocumentId
     ";
 
-    public async Task<InventoryOpeningDto> Handle(GetInventoryOpeningQuery request, CancellationToken cancellationToken)
+    public async Task<GetInventoryOpeningResponse> Handle(GetInventoryOpeningQuery request, CancellationToken cancellationToken)
     {
-        var document = await _dbSession.Connection.QuerySingleOrDefaultAsync<InventoryOpeningDto>(GET_MASTER_SQL, new
+        var document = await _dbSession.Connection.QuerySingleOrDefaultAsync<GetInventoryOpeningResponse>(GET_MASTER_SQL, new
         {
             DocumentId = request.DocumentId
         });
@@ -71,7 +71,7 @@ public class GetInventoryOpeningHandler : IRequestHandler<GetInventoryOpeningQue
             throw new BusinessException("notfound");
         }
 
-        var lines = await _dbSession.Connection.QueryAsync<InventoryOpeningLineDto>(GET_LINES_SQL, new
+        var lines = await _dbSession.Connection.QueryAsync<GetInventoryOpeningLineResponse>(GET_LINES_SQL, new
         {
             DocumentId = request.DocumentId
         });

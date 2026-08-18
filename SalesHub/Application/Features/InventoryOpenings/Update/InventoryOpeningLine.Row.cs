@@ -1,7 +1,8 @@
 namespace Application.Features.InventoryOpenings.Update;
 
-public class InventoryOpeningLineDto
+public class InventoryOpeningLineRow
 {
+    public Guid DocumentId {get;set;}
     public int ProductId {get;set;}
     public int UnitId {get;set;}
     public int Quantity {get;set;}

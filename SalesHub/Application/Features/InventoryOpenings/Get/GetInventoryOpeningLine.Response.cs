@@ -1,6 +1,6 @@
 namespace Application.Features.InventoryOpenings.Get;
 
-public class InventoryOpeningLineDto
+public class GetInventoryOpeningLineResponse
 {
     public int ProductId {get;set;}
     public string ProductInternalCode {get;set;} = null!;

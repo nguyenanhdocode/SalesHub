@@ -1,12 +1,15 @@
 using Application.Database;
+using Application.Models.Documents;
+using Application.Models.InventoryBalances;
 using Application.Services;
+using Application.Shared;
 using Dapper;
 using Infrastructure.Security;
 using MediatR;
 
 namespace Application.Features.InventoryOpenings.Create;
 
-public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpeningCommand, CreateInventoryOpeningResponse>
+public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpeningCommand, CreateDocumentResponse>
 {
     private readonly DbSession _dbSession;
     private readonly CurrentUser _currentUser;
@@ -54,16 +57,7 @@ public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpen
     , @SortOrder);
     ";
 
-    const string INSERT_INVENTORY_BALANCE_SQL = @"
-    INSERT INTO inventory_balances
-    (warehouse_id, product_id, unit_id, quantity, amount)
-    VALUES (@WarehouseId, @ProductId, @UnitId, @Quantity, @Amount)
-    ON CONFLICT (warehouse_id, product_id, unit_id)
-    DO UPDATE
-    SET quantity = @Quantity, amount = @Amount;
-    ";
-
-    public async Task<CreateInventoryOpeningResponse> Handle(CreateInventoryOpeningCommand request, CancellationToken cancellationToken)
+    public async Task<CreateDocumentResponse> Handle(CreateInventoryOpeningCommand request, CancellationToken cancellationToken)
     {
         var id = Guid.CreateVersion7();
 
@@ -94,7 +88,7 @@ public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpen
 
         await _dbSession.Connection.ExecuteAsync(INSERT_LINE_SQL, lines, _dbSession.Transaction);
 
-        var balances = request.Lines.Select(p => new
+        var balances = request.Lines.Select(p => new InventoryBalanceParams
         {
             WarehouseId = request.WarehouseId,
             ProductId = p.ProductId,
@@ -103,9 +97,10 @@ public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpen
             Amount = p.Amount,
         });
 
-        await _dbSession.Connection.ExecuteAsync(INSERT_INVENTORY_BALANCE_SQL, balances, _dbSession.Transaction);
+        await _dbSession.Connection.ExecuteAsync(InventoryBalanceSqls.UPSERT_INVENTORY_BALANCE_SQL
+            , balances, _dbSession.Transaction);
 
-        return new CreateInventoryOpeningResponse
+        return new CreateDocumentResponse
         {
             DocumentId = id,
             DocumentNo = docNo

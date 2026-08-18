@@ -94,7 +94,7 @@ public class CarryForwardHandler : IRequestHandler<CarryForwardCommand>
                 WarehouseId = warehouseId,
                 PeriodId = request.DstPeriodId,
                 CreatedBy = _currentUser.UserId,
-                Note = "PHIẾU TỒN KHO ĐƯỢC SINH TỰ ĐỘNG"
+                Note = "PHIẾU TỒN ĐẦU KỲ ĐƯỢC SINH TỰ ĐỘNG"
             }, _dbSession.Transaction);
 
             // Insert lines

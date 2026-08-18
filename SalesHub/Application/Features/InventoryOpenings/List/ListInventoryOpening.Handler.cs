@@ -8,7 +8,7 @@ using MediatR;
 
 namespace Application.Features.InventoryOpenings.List;
 
-public class ListInventoryOpeningHandler : IRequestHandler<ListInventoryOpeningQuery, PagedResult<InventoryOpeningDto>>
+public class ListInventoryOpeningHandler : IRequestHandler<ListInventoryOpeningQuery, PagedResult<InventoryOpeningListItem>>
 {
     private readonly DbSession _dbSession;
     public ListInventoryOpeningHandler(DbSession dbSession)
@@ -49,7 +49,7 @@ public class ListInventoryOpeningHandler : IRequestHandler<ListInventoryOpeningQ
     SELECT COUNT(1) FROM inventory_openings WHERE 1=1
     ";
 
-    public async Task<PagedResult<InventoryOpeningDto>> Handle(ListInventoryOpeningQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<InventoryOpeningListItem>> Handle(ListInventoryOpeningQuery request, CancellationToken cancellationToken)
     {
         var filterBuilder = new StringBuilder();
 
@@ -97,8 +97,8 @@ public class ListInventoryOpeningHandler : IRequestHandler<ListInventoryOpeningQ
         parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
         parameters.Add("PageSize", request.PageSize);
 
-        var data = await _dbSession.Connection.QueryAsync<InventoryOpeningDto>(dataQuery.ToString(), parameters);
+        var data = await _dbSession.Connection.QueryAsync<InventoryOpeningListItem>(dataQuery.ToString(), parameters);
 
-        return new PagedResult<InventoryOpeningDto>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<InventoryOpeningListItem>(data, totalPages, request.PageNum, request.PageSize);
     }
 }
