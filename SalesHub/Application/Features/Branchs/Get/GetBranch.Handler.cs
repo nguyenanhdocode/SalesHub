@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Features.Branchs.Get;
 
-public class GetBranchHandler : IRequestHandler<GetBranchQuery, BranchDto>
+public class GetBranchHandler : IRequestHandler<GetBranchQuery, GetBranchResponse>
 {
     private readonly DbSession _dbSession;
     public GetBranchHandler(DbSession dbSession)
@@ -28,9 +28,9 @@ public class GetBranchHandler : IRequestHandler<GetBranchQuery, BranchDto>
     WHERE branch_id = @BranchId
     ";
 
-    public async Task<BranchDto> Handle(GetBranchQuery request, CancellationToken cancellationToken)
+    public async Task<GetBranchResponse> Handle(GetBranchQuery request, CancellationToken cancellationToken)
     {
-        var row = await _dbSession.Connection.QuerySingleOrDefaultAsync<BranchDto>(GET_QUERY, new
+        var row = await _dbSession.Connection.QuerySingleOrDefaultAsync<GetBranchResponse>(GET_QUERY, new
         {
             BranchId = request.BranchId
         });

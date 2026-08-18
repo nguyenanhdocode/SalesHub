@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Features.Branchs.Create;
 
-public class CreateBranchHandler : IRequestHandler<CreateBranchCommand, CreateBranchResponse>
+public class CreateBranchHandler : IRequestHandler<CreateBranchCommand, int>
 {
     private readonly DbSession _dbSession;
 
@@ -21,13 +21,10 @@ public class CreateBranchHandler : IRequestHandler<CreateBranchCommand, CreateBr
     RETURNING branch_id;
     ";
 
-    public async Task<CreateBranchResponse> Handle(CreateBranchCommand request, CancellationToken cancellationToken)
+    public async Task<int> Handle(CreateBranchCommand request, CancellationToken cancellationToken)
     {
         int id = await _dbSession.Connection.ExecuteScalarAsync<int>(INSERT_QUERY, request);
 
-        return new CreateBranchResponse
-        {
-            BranchId = id
-        };
+        return id;
     }
 }

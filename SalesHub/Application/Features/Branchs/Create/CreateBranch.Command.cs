@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Application.Features.Branchs.Create;
 
-public class CreateBranchCommand : IRequest<CreateBranchResponse>, ITransactionalRequest
+public class CreateBranchCommand : IRequest<int>, ITransactionalRequest
 {
     public string Code {get;set;} = null!;
     public string Name {get;set;} = null!;
@@ -13,5 +13,5 @@ public class CreateBranchCommand : IRequest<CreateBranchResponse>, ITransactiona
     public string? Email {get;set;}
     public string? TaxCode {get;set;}
 
-    public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
+    IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }

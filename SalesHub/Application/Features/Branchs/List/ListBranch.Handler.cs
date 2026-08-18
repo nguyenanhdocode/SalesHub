@@ -8,7 +8,7 @@ using MediatR;
 
 namespace Application.Features.Branchs.List;
 
-public class ListBranchHandler : IRequestHandler<ListBranchQuery, PagedResult<BranchDto>>
+public class ListBranchHandler : IRequestHandler<ListBranchQuery, PagedResult<BranchListItem>>
 {
     private readonly DbSession _dbSession;
     public ListBranchHandler(DbSession dbSession)
@@ -36,7 +36,7 @@ public class ListBranchHandler : IRequestHandler<ListBranchQuery, PagedResult<Br
     WHERE 1=1
     ";
 
-    public async Task<PagedResult<BranchDto>> Handle(ListBranchQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<BranchListItem>> Handle(ListBranchQuery request, CancellationToken cancellationToken)
     {
         var filterBuilder = new StringBuilder();
 
@@ -96,8 +96,8 @@ public class ListBranchHandler : IRequestHandler<ListBranchQuery, PagedResult<Br
         parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
         parameters.Add("PageSize", request.PageSize);
 
-        var data = await _dbSession.Connection.QueryAsync<BranchDto>(dataQuery.ToString(), parameters);
+        var data = await _dbSession.Connection.QueryAsync<BranchListItem>(dataQuery.ToString(), parameters);
 
-        return new PagedResult<BranchDto>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<BranchListItem>(data, totalPages, request.PageNum, request.PageSize);
     }
 }

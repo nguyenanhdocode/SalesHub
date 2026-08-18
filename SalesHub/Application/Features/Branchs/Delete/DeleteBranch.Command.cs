@@ -8,5 +8,5 @@ public class DeleteBranchCommand : IRequest, ITransactionalRequest
 {
     public int BranchId {get;set;}
 
-    public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
+    IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }

@@ -1,6 +1,6 @@
-namespace Application.Features.Branchs.List;
+namespace Application.Features.Branchs.Get;
 
-public class BranchDto
+public class GetBranchResponse
 {
     public string BranchId {get;set;} = null!;
     public string Code {get;set;} = null!;

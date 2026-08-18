@@ -8,7 +8,7 @@ using MediatR;
 
 namespace Application.Features.Branchs.List;
 
-public class ListBranchQuery : IRequest<PagedResult<BranchDto>>, IPaginable, ITransactionalRequest
+public class ListBranchQuery : IRequest<PagedResult<BranchListItem>>, IPaginable, ITransactionalRequest
 {
     public int? BranchId {get;set;} = null!;
     public string? Code {get;set;} = null!;
@@ -20,5 +20,5 @@ public class ListBranchQuery : IRequest<PagedResult<BranchDto>>, IPaginable, ITr
     public int PageNum { get; set; } = Constants.PAGE_NUM;
     public int PageSize { get; set; } = Constants.PAGE_SIZE;
 
-    public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
+    IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }
