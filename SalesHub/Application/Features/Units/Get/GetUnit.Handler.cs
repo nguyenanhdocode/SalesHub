@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Features.Units.Get;
 
-public class GetUnitHandler : IRequestHandler<GetUnitQuery, UnitDto>
+public class GetUnitHandler : IRequestHandler<GetUnitQuery, GetUnitResponse>
 {
     public readonly DbSession _dbSession;
     public GetUnitHandler(DbSession dbSession)
@@ -25,9 +25,9 @@ public class GetUnitHandler : IRequestHandler<GetUnitQuery, UnitDto>
     WHERE unit_id = @UnitId
     ";
 
-    public async Task<UnitDto> Handle(GetUnitQuery request, CancellationToken cancellationToken)
+    public async Task<GetUnitResponse> Handle(GetUnitQuery request, CancellationToken cancellationToken)
     {
-        var row = await _dbSession.Connection.QuerySingleOrDefaultAsync<UnitDto>(GET_QUERY, new
+        var row = await _dbSession.Connection.QuerySingleOrDefaultAsync<GetUnitResponse>(GET_QUERY, new
         {
             UnitId = request.UnitId
         });

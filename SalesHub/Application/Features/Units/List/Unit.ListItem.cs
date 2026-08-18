@@ -1,6 +1,6 @@
 namespace Application.Features.Units.List;
 
-public class UnitDto
+public class UnitListItem
 {
     public int UnitId {get;set;}
     public string Code { get; set; } = null!;

@@ -7,7 +7,7 @@ using MediatR;
 
 namespace Application.Features.Units.List;
 
-public class ListUnitQuery : IRequest<PagedResult<UnitDto>>, IPaginable, ITransactionalRequest
+public class ListUnitQuery : IRequest<PagedResult<UnitListItem>>, IPaginable, ITransactionalRequest
 {
     public int? UnitId {get;set;}
     public string? Code {get;set;}

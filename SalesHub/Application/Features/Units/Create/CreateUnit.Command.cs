@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Features.Units.Create;
 
-public class CreateUnitCommand : IRequest<CreateUnitResponse>, ITransactionalRequest
+public class CreateUnitCommand : IRequest<int>, ITransactionalRequest
 {
     public string Code {get;set;} = null!;
     public string Name {get;set;} = null!;

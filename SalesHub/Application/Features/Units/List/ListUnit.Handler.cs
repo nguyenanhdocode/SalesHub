@@ -7,7 +7,7 @@ using MediatR;
 
 namespace Application.Features.Units.List;
 
-public class ListUnitHandler : IRequestHandler<ListUnitQuery, PagedResult<UnitDto>>
+public class ListUnitHandler : IRequestHandler<ListUnitQuery, PagedResult<UnitListItem>>
 {
     private readonly DbSession _dbSession;
     public ListUnitHandler(DbSession dbSession)
@@ -29,7 +29,7 @@ public class ListUnitHandler : IRequestHandler<ListUnitQuery, PagedResult<UnitDt
 
     private const string COUNT_QUERY = @"SELECT COUNT(1) FROM public.units WHERE 1=1";
 
-    public async Task<PagedResult<UnitDto>> Handle(ListUnitQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<UnitListItem>> Handle(ListUnitQuery request, CancellationToken cancellationToken)
     {
         var filterQueryBuilder = new StringBuilder();
         var parameters = new DynamicParameters();
@@ -64,8 +64,8 @@ public class ListUnitHandler : IRequestHandler<ListUnitQuery, PagedResult<UnitDt
         parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
         parameters.Add("PageSize", request.PageSize);
 
-        var data = await _dbSession.Connection.QueryAsync<UnitDto>(dataQueryBuilder.ToString(), parameters);
+        var data = await _dbSession.Connection.QueryAsync<UnitListItem>(dataQueryBuilder.ToString(), parameters);
 
-        return new PagedResult<UnitDto>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<UnitListItem>(data, totalPages, request.PageNum, request.PageSize);
     }
 }

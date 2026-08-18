@@ -1,6 +1,6 @@
 namespace Application.Features.Units.Get;
 
-public class UnitDto
+public class GetUnitResponse
 {
     public int RowNumber { get; set; }
     public int UnitId { get; set; }

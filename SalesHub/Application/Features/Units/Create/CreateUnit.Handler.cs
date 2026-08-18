@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Application.Features.Units.Create;
 
-public class CreateUnitHandler : IRequestHandler<CreateUnitCommand, CreateUnitResponse>
+public class CreateUnitHandler : IRequestHandler<CreateUnitCommand, int>
 {
     private readonly DbSession _dbSession;
     public CreateUnitHandler(DbSession dbSession)
@@ -22,7 +22,7 @@ public class CreateUnitHandler : IRequestHandler<CreateUnitCommand, CreateUnitRe
 
     private const string CHECK_EXISTS_QUERY = @"SELECT EXISTS(SELECT 1 FROM units WHERE code = @Code)";
 
-    public async Task<CreateUnitResponse> Handle(CreateUnitCommand request, CancellationToken cancellationToken)
+    public async Task<int> Handle(CreateUnitCommand request, CancellationToken cancellationToken)
     {
         bool exists = await _dbSession.Connection.QuerySingleAsync<bool>(CHECK_EXISTS_QUERY, new { request.Code });
 
@@ -37,9 +37,6 @@ public class CreateUnitHandler : IRequestHandler<CreateUnitCommand, CreateUnitRe
             Name = request.Name
         });
 
-        return new CreateUnitResponse
-        {
-            UnitId = id
-        };
+        return id;
     }
 }
