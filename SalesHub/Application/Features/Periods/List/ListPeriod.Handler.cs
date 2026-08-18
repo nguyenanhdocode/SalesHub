@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Application.Features.Periods.List;
 
-public class ListPeriodHandler : IRequestHandler<ListPeriodQuery, PagedResult<PeriodDto>>
+public class ListPeriodHandler : IRequestHandler<ListPeriodQuery, PagedResult<PeriodListItem>>
 {
     private readonly DbSession _dbSession;
     public ListPeriodHandler(DbSession dbSession)
@@ -30,7 +30,7 @@ public class ListPeriodHandler : IRequestHandler<ListPeriodQuery, PagedResult<Pe
     SELECT COUNT(1) FROM public.periods WHERE 1=1
     ";
 
-    public async Task<PagedResult<PeriodDto>> Handle(ListPeriodQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<PeriodListItem>> Handle(ListPeriodQuery request, CancellationToken cancellationToken)
     {
         var filterQueryBuilder = new StringBuilder();
         var parameters = new DynamicParameters();
@@ -83,8 +83,8 @@ public class ListPeriodHandler : IRequestHandler<ListPeriodQuery, PagedResult<Pe
         parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
         parameters.Add("PageSize", request.PageSize);
 
-        var data = await _dbSession.Connection.QueryAsync<PeriodDto>(listQueryBuilder.ToString(), parameters);
+        var data = await _dbSession.Connection.QueryAsync<PeriodListItem>(listQueryBuilder.ToString(), parameters);
 
-        return new PagedResult<PeriodDto>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<PeriodListItem>(data, totalPages, request.PageNum, request.PageSize);
     }
 }

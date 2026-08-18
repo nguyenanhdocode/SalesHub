@@ -7,7 +7,7 @@ using MediatR;
 
 namespace Application.Features.Periods.List;
 
-public class ListPeriodQuery : IRequest<PagedResult<PeriodDto>>, IPaginable, ITransactionalRequest
+public class ListPeriodQuery : IRequest<PagedResult<PeriodListItem>>, IPaginable, ITransactionalRequest
 {
     public int? PeriodId { get; set; }
     public string? Code { get; set; }

@@ -1,6 +1,6 @@
 namespace Application.Features.Periods.Get;
 
-public class PeriodDto
+public class GetPeriodResponse
 {
     public int PeriodId {get;set;}
     public string Code {get;set;} = null!;

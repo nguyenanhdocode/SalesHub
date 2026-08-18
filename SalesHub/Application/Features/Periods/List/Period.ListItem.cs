@@ -1,6 +1,6 @@
 namespace Application.Features.Periods.List;
 
-public class PeriodDto
+public class PeriodListItem
 {
     public int PeriodId {get;set;}
     public string Code {get;set;} = null!;
