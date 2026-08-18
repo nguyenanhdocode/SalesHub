@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Application.Features.Suppliers.Get;
 
-public class GetSupplierHandler : IRequestHandler<GetSupplierQuery, SupplierDto>
+public class GetSupplierHandler : IRequestHandler<GetSupplierQuery, GetSupplierResponse>
 {
     private readonly DbSession _dbSession;
     public GetSupplierHandler(DbSession dbSession)
@@ -30,9 +30,9 @@ public class GetSupplierHandler : IRequestHandler<GetSupplierQuery, SupplierDto>
     WHERE supplier_id = @SupplierId
     ";
 
-    public async Task<SupplierDto> Handle(GetSupplierQuery request, CancellationToken cancellationToken)
+    public async Task<GetSupplierResponse> Handle(GetSupplierQuery request, CancellationToken cancellationToken)
     {
-        var row = await _dbSession.Connection.QuerySingleOrDefaultAsync<SupplierDto>(GET_QUERY, new
+        var row = await _dbSession.Connection.QuerySingleOrDefaultAsync<GetSupplierResponse>(GET_QUERY, new
         {
             SupplierId = request.SupplierId
         });

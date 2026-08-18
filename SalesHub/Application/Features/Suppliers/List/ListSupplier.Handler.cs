@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Application.Features.Suppliers.List;
 
-public class ListSupplierHandler : IRequestHandler<ListSupplierQuery, PagedResult<SupplierDto>>
+public class ListSupplierHandler : IRequestHandler<ListSupplierQuery, PagedResult<SupplierListItem>>
 {
     private readonly DbSession _dbSession;
     public ListSupplierHandler(DbSession dbSession)
@@ -35,7 +35,7 @@ public class ListSupplierHandler : IRequestHandler<ListSupplierQuery, PagedResul
     WHERE 1=1
     ";
 
-    public async Task<PagedResult<SupplierDto>> Handle(ListSupplierQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<SupplierListItem>> Handle(ListSupplierQuery request, CancellationToken cancellationToken)
     {
         var filterBuilder = new StringBuilder();
 
@@ -101,8 +101,8 @@ public class ListSupplierHandler : IRequestHandler<ListSupplierQuery, PagedResul
             parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
             parameters.Add("PageSize", request.PageSize);
 
-            var data = await _dbSession.Connection.QueryAsync<SupplierDto>(dataQuery.ToString(), parameters);
+            var data = await _dbSession.Connection.QueryAsync<SupplierListItem>(dataQuery.ToString(), parameters);
 
-            return new PagedResult<SupplierDto>(data, totalPages, request.PageNum, request.PageSize);
+            return new PagedResult<SupplierListItem>(data, totalPages, request.PageNum, request.PageSize);
     }
 }

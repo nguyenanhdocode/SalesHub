@@ -1,6 +1,6 @@
 namespace Application.Features.Suppliers.List;
 
-public class SupplierDto
+public class SupplierListItem
 {
     public int SupplierId {get;set;}
     public string Code {get;set;} = null!;

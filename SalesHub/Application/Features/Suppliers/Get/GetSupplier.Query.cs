@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Application.Features.Suppliers.Get;
 
-public class GetSupplierQuery : IRequest<SupplierDto>, ITransactionalRequest
+public class GetSupplierQuery : IRequest<GetSupplierResponse>, ITransactionalRequest
 {
     public int SupplierId {get;set;}
     IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
