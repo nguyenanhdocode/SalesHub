@@ -1,6 +1,6 @@
-namespace Application.Features.Warehouses.Get;
+namespace Application.Features.Warehouses.List;
 
-public class WarehouseDto
+public class WarehouseListItem
 {
     public int WarehouseId {get;set;}
     public string Code {get;set;} = null!;

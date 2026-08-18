@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Application.Features.Warehouses.Get;
 
-public class GetWarehouseQuery : IRequest<WarehouseDto>, ITransactionalRequest
+public class GetWarehouseQuery : IRequest<GetWarehouseResponse>, ITransactionalRequest
 {
     public int WarehouseId {get;set;}
     IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;

@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Application.Features.Warehouses.List;
 
-public class ListWarehouseHandler : IRequestHandler<ListWarehouseQuery, PagedResult<WarehouseDto>>
+public class ListWarehouseHandler : IRequestHandler<ListWarehouseQuery, PagedResult<WarehouseListItem>>
 {
     private readonly DbSession _dbSession;
     public ListWarehouseHandler(DbSession dbSession)
@@ -34,7 +34,7 @@ public class ListWarehouseHandler : IRequestHandler<ListWarehouseQuery, PagedRes
     SELECT COUNT(1) FROM public.warehouses WHERE 1=1
     ";
 
-    public async Task<PagedResult<WarehouseDto>> Handle(ListWarehouseQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<WarehouseListItem>> Handle(ListWarehouseQuery request, CancellationToken cancellationToken)
     {
         var filterQueryBuilder = new StringBuilder();
         var parameters = new DynamicParameters();
@@ -75,8 +75,8 @@ public class ListWarehouseHandler : IRequestHandler<ListWarehouseQuery, PagedRes
         parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
         parameters.Add("PageSize", request.PageSize);
 
-        var data = await _dbSession.Connection.QueryAsync<WarehouseDto>(listQueryBuilder.ToString(), parameters);
+        var data = await _dbSession.Connection.QueryAsync<WarehouseListItem>(listQueryBuilder.ToString(), parameters);
 
-        return new PagedResult<WarehouseDto>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<WarehouseListItem>(data, totalPages, request.PageNum, request.PageSize);
     }
 }

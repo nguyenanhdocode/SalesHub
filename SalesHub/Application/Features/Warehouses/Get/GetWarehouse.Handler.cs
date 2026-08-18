@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Features.Warehouses.Get;
 
-public class GetWarehouseHandler : IRequestHandler<GetWarehouseQuery, WarehouseDto>
+public class GetWarehouseHandler : IRequestHandler<GetWarehouseQuery, GetWarehouseResponse>
 {
     private readonly DbSession _dbSession;
     public GetWarehouseHandler(DbSession dbSession)
@@ -28,9 +28,9 @@ public class GetWarehouseHandler : IRequestHandler<GetWarehouseQuery, WarehouseD
     INNER JOIN branchs ON branchs.branch_id = warehouses.branch_id
     WHERE warehouse_id = @WarehouseId;
     ";
-    public async Task<WarehouseDto> Handle(GetWarehouseQuery request, CancellationToken cancellationToken)
+    public async Task<GetWarehouseResponse> Handle(GetWarehouseQuery request, CancellationToken cancellationToken)
     {
-        var warehouse = await _dbSession.Connection.QuerySingleOrDefaultAsync<WarehouseDto>(GET_SQL, new
+        var warehouse = await _dbSession.Connection.QuerySingleOrDefaultAsync<GetWarehouseResponse>(GET_SQL, new
         {
             WarehouseId = request.WarehouseId
         });

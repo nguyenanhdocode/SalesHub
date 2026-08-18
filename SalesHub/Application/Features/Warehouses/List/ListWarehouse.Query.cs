@@ -7,7 +7,7 @@ using MediatR;
 
 namespace Application.Features.Warehouses.List;
 
-public class ListWarehouseQuery : IRequest<PagedResult<WarehouseDto>>, IPaginable, ITransactionalRequest
+public class ListWarehouseQuery : IRequest<PagedResult<WarehouseListItem>>, IPaginable, ITransactionalRequest
 {
     public int? WarehouseId {get;set;}
     public string? Code {get;set;}
