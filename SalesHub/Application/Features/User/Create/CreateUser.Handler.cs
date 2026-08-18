@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Application.Features.User.Create;
 
-public class CreateUserHandler : IRequestHandler<CreateUserCommand, CreateUserResponse>
+public class CreateUserHandler : IRequestHandler<CreateUserCommand, Guid>
 {
     private readonly DbSession _dbSession;
     private readonly ArgonPasswordHasher _passwordHasher;
@@ -24,7 +24,7 @@ public class CreateUserHandler : IRequestHandler<CreateUserCommand, CreateUserRe
     VALUES (@UserId, @UserName, @Password)
     ";
 
-    public async Task<CreateUserResponse> Handle(CreateUserCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
         var user = await _dbSession.Connection.QuerySingleAsync<bool>(CHECK_EXISTS_QUERY, new { request.UserName });
 
@@ -42,9 +42,6 @@ public class CreateUserHandler : IRequestHandler<CreateUserCommand, CreateUserRe
             Password = _passwordHasher.Hash(request.Password)
         });
 
-        return new CreateUserResponse
-        {
-            UserId = userId
-        };
+        return userId;
     }
 }

@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Features.User.Create;
 
-public sealed class CreateUserCommand : IRequest<CreateUserResponse>, ITransactionalRequest
+public sealed class CreateUserCommand : IRequest<Guid>, ITransactionalRequest
 {
     public string UserName {get;set;} = null!;
     public string Password {get;set;} = null!;
