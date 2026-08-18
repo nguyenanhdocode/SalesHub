@@ -10,7 +10,7 @@ public class CreateGoodsReceiptCommand : CreateDocumentCommand, ITransactionalRe
 {
     public string? ShipperName {get;set;}
     public int WarehouseId {get;set;}
-    public List<GoodsReceiptLineDto> Lines {get;set;} = [];
+    public List<GoodsReceiptLineInput> Lines {get;set;} = [];
 
     public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
 }

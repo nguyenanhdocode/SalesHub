@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Features.GoodsReceipts.Get;
 
-public class GetGoodsReceiptQuery : IRequest<GoodsReceiptsDto>, ITransactionalRequest
+public class GetGoodsReceiptQuery : IRequest<GetGoodsReceiptResponse>, ITransactionalRequest
 {
     public Guid DocumentId {get;set;}
 

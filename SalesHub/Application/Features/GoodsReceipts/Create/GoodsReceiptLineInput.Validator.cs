@@ -1,10 +1,10 @@
 using FluentValidation;
 
-namespace Application.Features.GoodsReceipts.Update;
+namespace Application.Features.GoodsReceipts.Create;
 
-public class GoodsReceiptLineDtoValidator : AbstractValidator<GoodsReceiptLineDto>
+public class GoodsReceiptLineInputValidator : AbstractValidator<GoodsReceiptLineInput>
 {
-    public GoodsReceiptLineDtoValidator()
+    public GoodsReceiptLineInputValidator()
     {
         RuleFor(p => p.ProductId).NotNull();
         RuleFor(p => p.UnitId).NotNull();

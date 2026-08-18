@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Models.Documents;
 
-public class CreateDocumentCommand : IRequest<Guid>
+public class CreateDocumentCommand : IRequest<CreateDocumentResponse>
 {
     public DateTime PostingDate {get;set;}
     public DateTime DocumentDate {get;set;}

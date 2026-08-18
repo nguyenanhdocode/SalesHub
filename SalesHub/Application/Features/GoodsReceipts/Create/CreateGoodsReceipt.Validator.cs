@@ -17,6 +17,6 @@ public class CreateGoodsReceiptValidator : CreateDocumentValidator<CreateGoodsRe
             .NotEmpty();
 
         RuleForEach(p => p.Lines)
-            .SetValidator(new GoodsReceiptLineDtoValidator());
+            .SetValidator(new GoodsReceiptLineInputValidator());
     }   
 }

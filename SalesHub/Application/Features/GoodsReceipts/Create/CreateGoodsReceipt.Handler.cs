@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using Application.Database;
 using Application.Exceptions;
+using Application.Models.Documents;
+using Application.Models.InventoryBalances;
 using Application.Services;
 using Application.Shared;
 using Application.Shared.Documents;
@@ -10,7 +12,7 @@ using MediatR;
 
 namespace Application.Features.GoodsReceipts.Create;
 
-public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptCommand, Guid>
+public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptCommand, CreateDocumentResponse>
 {
     private readonly DbSession _dbSession;
     private readonly CurrentUser _currentUser;
@@ -63,7 +65,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
     )
     ";
 
-    public async Task<Guid> Handle(CreateGoodsReceiptCommand request, CancellationToken cancellationToken)
+    public async Task<CreateDocumentResponse> Handle(CreateGoodsReceiptCommand request, CancellationToken cancellationToken)
     {
         bool isValidPostingDate = await _dbSession.Connection.ExecuteScalarAsync<bool>(DocumentSqls.CHECK_POSTINGDATE_SQL, new
         {
@@ -79,7 +81,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
         var id = Guid.CreateVersion7();
         var docNo = await _docNoService.GetNextDocumentNo("GR", request.DocumentDate.Year, request.DocumentDate.Month);
 
-        await _dbSession.Connection.ExecuteAsync(DocumentSqls.INSERT_DOCUMENT_SQL, new
+        await _dbSession.Connection.ExecuteAsync(DocumentSqls.INSERT_DOCUMENT_SQL, new CreateDocumentParams
         {
               DocumentId = id
             , DocumentNo = docNo
@@ -101,7 +103,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
 
         var lines = request.Lines.Select(p => new
         {
-            DocumentId = id
+              DocumentId = id
             , ProductId = p.ProductId
             , UnitId = p.UnitId
             , DocumentQuantity = p.DocumentQuantity
@@ -114,7 +116,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
 
         await _dbSession.Connection.ExecuteAsync(INSERT_LINES_SQL, lines, _dbSession.Transaction);
 
-        var balances = request.Lines.Select(p => new
+        var balances = request.Lines.Select(p => new InventoryBalanceParams
         {
               WarehouseId = request.WarehouseId
             , ProductId = p.ProductId
@@ -123,8 +125,13 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
             , Amount = p.Amount
         });
 
-        await _dbSession.Connection.ExecuteAsync(DocumentSqls.MERGE_BALANCES_SQL, balances, _dbSession.Transaction);
+        await _dbSession.Connection.ExecuteAsync(InventoryBalanceSqls.UPSERT_INVENTORY_BALANCE_SQL
+            , balances, _dbSession.Transaction);
 
-        return id;
+        return new CreateDocumentResponse
+        {
+            DocumentId = id,
+            DocumentNo = docNo
+        };
     }
 }

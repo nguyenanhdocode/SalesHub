@@ -9,7 +9,7 @@ public class UpdateGoodsReceiptCommand : UpdateDocumentCommand, ITransactionalRe
     , ICheckPeriodForUpdateRequest
 {
     public string? ShipperName {get;set;}
-    public List<GoodsReceiptLineDto> Lines {get;set;} = [];
+    public List<GoodsReceiptLineInput> Lines {get;set;} = [];
 
     public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
 

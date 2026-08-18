@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Data;
 using Application.Database;
 using Application.Exceptions;
+using Application.Models.Documents;
+using Application.Models.InventoryBalances;
 using Application.Services;
 using Application.Shared;
 using Application.Shared.Documents;
@@ -57,8 +59,9 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
     ";
 
     const string GET_LINES_SQL = @"
-    SELECT 
-          product_id AS ProductId
+    SELECT
+          document_id AS DocumentId 
+        , product_id AS ProductId
         , unit_id AS UnitId
         , document_quantity AS DocumentQuantity
         , actual_quantity AS ActualQuantity
@@ -94,14 +97,9 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
     WHERE document_id = @DocumentId;
     ";
 
-    const string UPDATE_BALANCE_LINES_SQL = @"
-    UPDATE inventory_balances
-    SET quantity = quantity + @QuantityDelta, amount = amount + @AmountDelta
-    WHERE warehouse_id = @WarehouseId AND product_id = @ProductId AND unit_id = @UnitId;
-    ";
-
     public async Task Handle(UpdateGoodsReceiptCommand request, CancellationToken cancellationToken)
     {
+        // Check posting date
         bool isValidPostingDate = await _dbSession.Connection.ExecuteScalarAsync<bool>(DocumentSqls.CHECK_POSTINGDATE_SQL, new
         {
             PeriodId = request.PeriodId,
@@ -113,7 +111,8 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
             throw new BusinessException("invalid_postingdate");
         }
 
-        await _dbSession.Connection.ExecuteAsync(DocumentSqls.UPDATE_DOCUMENT_SQL, new
+        // Update documents table
+        await _dbSession.Connection.ExecuteAsync(DocumentSqls.UPDATE_DOCUMENT_SQL, new UpdateDocumentParams
         {
             DocumentId = request.DocumentId,
             PostingDate = request.PostingDate,
@@ -124,41 +123,24 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
             Status = request.Status.ToString()
         }, _dbSession.Transaction);
 
+        // Update master table
         await _dbSession.Connection.ExecuteAsync(UPDATE_MASTER_SQL, new
         {
             DocumentId = request.DocumentId,
             ShipperName = request.ShipperName
         }, _dbSession.Transaction);
 
-        var dbLines = await _dbSession.Connection.QueryAsync<GoodsReceiptLineDto>(GET_LINES_SQL, new
+
+        var dbLines = await _dbSession.Connection.QueryAsync<GoodsReceiptLineRow>(GET_LINES_SQL, new
         {
             DocumentId = request.DocumentId
         }, _dbSession.Transaction);
 
         var deletedRows = dbLines.ExceptBy(request.Lines.Select(p => (p.ProductId, p.UnitId)), p => (p.ProductId, p.UnitId))
-            .Select(p => new
-            {
-                DocumentId = request.DocumentId,
-                ProductId = p.ProductId,
-                UnitId = p.UnitId,
-                DocumentQuantity = p.DocumentQuantity,
-                ActualQuantity = p.ActualQuantity,
-                Amount = p.Amount
-            }).ToList();
+            .ToList();
 
         var insertRows = request.Lines.ExceptBy(dbLines.Select(p => (p.ProductId, p.UnitId)), p => (p.ProductId, p.UnitId))
-            .Select(p => new
-            {
-                DocumentId = request.DocumentId,
-                ProductId = p.ProductId,
-                UnitId = p.UnitId,
-                DocumentQuantity = p.DocumentQuantity,
-                ActualQuantity = p.ActualQuantity,
-                Amount = p.Amount,
-                SortOrder = p.SortOrder,
-                Note = p.Note,
-                UnitPrice = p.UnitPrice
-            }).ToList();
+            .ToList();
 
         var updateRows = dbLines.Join(request.Lines
             , db => (db.ProductId, db.UnitId)
@@ -180,7 +162,7 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
             })
             .ToList();
 
-        var updateBalanceLines = new List<object>();
+        var updateBalanceLines = new List<UpdateInventoryBalanceParams>();
 
         int warehouseId = await _dbSession.Connection.ExecuteScalarAsync<int>(GET_WAREHOUSE_ID_SQL, new
         {
@@ -189,7 +171,7 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
 
         if (deletedRows.Count > 0)
         {
-            updateBalanceLines.AddRange(deletedRows.Select(p => new
+            updateBalanceLines.AddRange(deletedRows.Select(p => new UpdateInventoryBalanceParams
             {
                 WarehouseId = warehouseId,
                 ProductId = p.ProductId,
@@ -203,7 +185,7 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
 
         if (updateRows.Count > 0)
         {
-            updateBalanceLines.AddRange(updateRows.Select(p => new
+            updateBalanceLines.AddRange(updateRows.Select(p => new UpdateInventoryBalanceParams
             {
                 WarehouseId = warehouseId,
                 ProductId = p.ProductId,
@@ -217,7 +199,7 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
 
         if (insertRows.Count > 0)
         {
-            updateBalanceLines.AddRange(insertRows.Select(p => new
+            updateBalanceLines.AddRange(insertRows.Select(p => new UpdateInventoryBalanceParams
             {
                 WarehouseId = warehouseId,
                 ProductId = p.ProductId,
@@ -231,7 +213,8 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
 
         if (updateBalanceLines.Count > 0)
         {
-            await _dbSession.Connection.ExecuteAsync(UPDATE_BALANCE_LINES_SQL, updateBalanceLines, _dbSession.Transaction);
+            await _dbSession.Connection.ExecuteAsync(InventoryBalanceSqls.UPDATE_INVENTORY_BALANCE_SQL
+                , updateBalanceLines, _dbSession.Transaction);
         }
     }
 }

@@ -8,7 +8,7 @@ using MediatR;
 
 namespace Application.Features.GoodsReceipts.List;
 
-public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, PagedResult<GoodsReceiptsDto>>
+public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, PagedResult<GoodsReceiptListItem>>
     , ITransactionalRequest
 {
     private readonly DbSession _dbSession;
@@ -58,7 +58,7 @@ public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, 
     WHERE 1=1
     ";
 
-    public async Task<PagedResult<GoodsReceiptsDto>> Handle(ListGoodsReceiptsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<GoodsReceiptListItem>> Handle(ListGoodsReceiptsQuery request, CancellationToken cancellationToken)
     {
         var filterBuilder = new StringBuilder();
 
@@ -144,8 +144,8 @@ public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, 
         parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
         parameters.Add("PageSize", request.PageSize);
 
-        var data = await _dbSession.Connection.QueryAsync<GoodsReceiptsDto>(dataQuery.ToString(), parameters);
+        var data = await _dbSession.Connection.QueryAsync<GoodsReceiptListItem>(dataQuery.ToString(), parameters);
 
-        return new PagedResult<GoodsReceiptsDto>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<GoodsReceiptListItem>(data, totalPages, request.PageNum, request.PageSize);
     }
 }

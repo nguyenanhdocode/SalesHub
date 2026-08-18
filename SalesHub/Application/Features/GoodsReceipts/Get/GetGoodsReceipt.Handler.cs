@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Application.Features.GoodsReceipts.Get;
 
-public class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuery, GoodsReceiptsDto>
+public class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuery, GetGoodsReceiptResponse>
 {
     private readonly DbSession _dbSession;
     public GetGoodsReceiptHandler(DbSession dbSession)
@@ -47,9 +47,9 @@ public class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuery, Good
     WHERE documents.document_id = @DocumentId
     ";
 
-    public async Task<GoodsReceiptsDto> Handle(GetGoodsReceiptQuery request, CancellationToken cancellationToken)
+    public async Task<GetGoodsReceiptResponse> Handle(GetGoodsReceiptQuery request, CancellationToken cancellationToken)
     {
-        var row = await _dbSession.Connection.QuerySingleOrDefaultAsync<GoodsReceiptsDto>(GET_SQL, request);
+        var row = await _dbSession.Connection.QuerySingleOrDefaultAsync<GetGoodsReceiptResponse>(GET_SQL, request);
 
         if (row == null)
         {

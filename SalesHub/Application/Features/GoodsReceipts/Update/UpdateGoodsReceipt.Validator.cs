@@ -14,6 +14,6 @@ public class UpdateGoodsReceiptValidator : UpdateDocumentValidator<UpdateGoodsRe
             .NotEmpty();
 
         RuleForEach(p => p.Lines)
-            .SetValidator(new GoodsReceiptLineDtoValidator());
+            .SetValidator(new GoodsReceiptLineInputValidator());
     }   
 }

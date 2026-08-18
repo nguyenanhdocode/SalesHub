@@ -7,7 +7,7 @@ using MediatR;
 
 namespace Application.Features.GoodsReceipts.List;
 
-public class ListGoodsReceiptsQuery : IRequest<PagedResult<GoodsReceiptsDto>>, ITransactionalRequest
+public class ListGoodsReceiptsQuery : IRequest<PagedResult<GoodsReceiptListItem>>, ITransactionalRequest
     , IPaginable
 {
     public string? DocumentNo {get;set;}

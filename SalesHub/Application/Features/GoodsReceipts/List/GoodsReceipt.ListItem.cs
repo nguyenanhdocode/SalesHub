@@ -1,6 +1,6 @@
 namespace Application.Features.GoodsReceipts.List;
 
-public class GoodsReceiptsDto
+public class GoodsReceiptListItem
 {
     public Guid DocumentId {get;set;}
     public string DocumentNo {get;set;} = null!;

@@ -1,6 +1,6 @@
-namespace Application.Features.GoodsReceipts.Update;
+namespace Application.Features.GoodsReceipts.Create;
 
-public class GoodsReceiptLineDto
+public class GoodsReceiptLineInput
 {
     public int ProductId {get;set;}
     public int UnitId {get;set;}
