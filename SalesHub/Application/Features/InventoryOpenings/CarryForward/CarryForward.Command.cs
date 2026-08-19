@@ -10,6 +10,5 @@ public class CarryForwardCommand : IRequest, ITransactionalRequest
     public IList<int> WarehouseIds {get;set;} = [];
     public int SrcPeriodId {get;set;}
     public int DstPeriodId {get;set;}
-
-    public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
+    IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }

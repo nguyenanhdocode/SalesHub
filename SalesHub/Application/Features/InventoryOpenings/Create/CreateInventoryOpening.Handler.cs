@@ -26,35 +26,38 @@ public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpen
 
     const string INSERT_MASTER_SQL = @"
     INSERT INTO public.inventory_openings(
-    document_id
-    , document_no
-    , warehouse_id
-    , period_id
-    , created_by
-    , note)
+          document_id
+        , document_no
+        , warehouse_id
+        , period_id
+        , created_by
+        , note)
 	VALUES (
-    @DocumentId
-    , @DocumentNo
-    , @WarehouseId
-    , @PeriodId
-    , @CreatedBy
-    , @Note);
+          @DocumentId
+        , @DocumentNo
+        , @WarehouseId
+        , @PeriodId
+        , @CreatedBy
+        , @Note);
     ";
 
     const string INSERT_LINE_SQL = @"
     INSERT INTO public.inventory_opening_lines(
-	  document_id
-    , product_id
-    , unit_id
-    , quantity
-    , amount
-    , sort_order)
-	VALUES (@DocumentId
-    , @ProductId
-    , @UnitId
-    , @Quantity
-    , @Amount
-    , @SortOrder);
+          document_id
+        , product_id
+        , unit_id
+        , quantity
+        , amount
+        , sort_order
+    )
+	VALUES (
+          @DocumentId
+        , @ProductId
+        , @UnitId
+        , @Quantity
+        , @Amount
+        , @SortOrder
+    );
     ";
 
     public async Task<CreateDocumentResponse> Handle(CreateInventoryOpeningCommand request, CancellationToken cancellationToken)

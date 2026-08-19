@@ -47,7 +47,7 @@ public class CarryForwardHandler : IRequestHandler<CarryForwardCommand>
     INSERT INTO inventory_opening_lines
     (document_id, product_id, unit_id, quantity, amount)
     SELECT
-        @DocumentId
+          @DocumentId
         , product_id
         , unit_id
         , quantity

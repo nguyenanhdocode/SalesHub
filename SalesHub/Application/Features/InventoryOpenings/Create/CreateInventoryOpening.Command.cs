@@ -14,5 +14,5 @@ public class CreateInventoryOpeningCommand : IRequest<CreateDocumentResponse>, I
     public string? Note {get;set;}
     public List<InventoryOpeningLineInput> Lines {get;set;} = [];
 
-    public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
+    IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }
