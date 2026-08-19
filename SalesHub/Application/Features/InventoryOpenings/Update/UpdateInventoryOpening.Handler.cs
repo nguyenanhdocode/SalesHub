@@ -98,7 +98,7 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
     )
     ON CONFLICT (warehouse_id, product_id, unit_id)
     DO UPDATE SET
-        quantity = EXCLUDED.quantity
+          quantity = EXCLUDED.quantity
         , amount = EXCLUDED.amount
     ";
 

@@ -1,4 +1,5 @@
 using Application.Features.GoodsReceipts.Create;
+using Application.Features.GoodsReceipts.Delete;
 using Application.Features.GoodsReceipts.Get;
 using Application.Features.GoodsReceipts.List;
 using Application.Features.GoodsReceipts.Update;
@@ -58,6 +59,16 @@ namespace MyApp.Namespace
             var row = await _sender.Send(new GetGoodsReceiptQuery { DocumentId = documentId }, cancellationToken);
 
             return Results.Ok(row);
+        }
+
+        [HttpDelete]
+        [Authorize]
+        [Route("{documentId}")]
+        public async Task<IResult> Delete(Guid documentId, CancellationToken cancellationToken)
+        {
+            await _sender.Send(new DeleteGoodsReceiptCommand { DocumentId = documentId }, cancellationToken);
+
+            return Results.Ok();
         }
     }
 }

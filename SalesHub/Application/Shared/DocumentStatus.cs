@@ -4,5 +4,5 @@ namespace Application.Shared;
 
 public enum DocumentStatus
 {
-    DRAFT, POSTED, CANCELLED
+    DRAFT, POSTED
 }

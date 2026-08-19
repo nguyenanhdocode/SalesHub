@@ -33,9 +33,35 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
     WHERE document_id = @DocumentId;
     ";
 
-    const string INSERT_LINES_SQL = @"
+    const string GET_LINES_SQL = @"
+    SELECT
+          document_id AS DocumentId 
+        , product_id AS ProductId
+        , unit_id AS UnitId
+        , document_quantity AS DocumentQuantity
+        , actual_quantity AS ActualQuantity
+        , amount AS Amount
+        , sort_order AS SortOrder
+        , note AS Note
+        , unit_price AS UnitPrice
+	FROM public.goods_receipt_lines
+    WHERE document_id = @DocumentId;
+    ";
+
+    const string DELETE_LINE_SQL = @"
+    DELETE FROM goods_receipt_lines
+    WHERE document_id = @DocumentId AND product_id = @ProductId  AND unit_id = @UnitId;
+    ";
+
+    const string GET_WAREHOUSE_ID_SQL = @"
+    SELECT warehouse_id
+    FROM goods_receipts
+    WHERE document_id = @DocumentId;
+    ";
+
+    const string UPSERT_LINE_SQL = @"
     INSERT INTO public.goods_receipt_lines(
-	    document_id
+	      document_id
         , product_id
         , unit_id
         , document_quantity
@@ -56,50 +82,44 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
         , @Note
         , @UnitPrice
     )
+    ON CONFLICT (document_id, product_id, unit_id)
+    DO UPDATE SET
+          document_quantity = @DocumentQuantity
+        , actual_quantity = @ActualQuantity
+        , amount = @Amount
+        , note = @Note
+        , unit_price = @UnitPrice
     ";
 
-    const string GET_LINES_SQL = @"
-    SELECT
-          document_id AS DocumentId 
-        , product_id AS ProductId
-        , unit_id AS UnitId
-        , document_quantity AS DocumentQuantity
-        , actual_quantity AS ActualQuantity
-        , amount AS Amount
-        , sort_order AS SortOrder
-        , note AS Note
-        , unit_price AS UnitPrice
-	FROM public.goods_receipt_lines
-    WHERE document_id = @DocumentId;
+    public const string UPSERT_INVENTORY_BALANCE_SQL = @"
+    INSERT INTO public.inventory_balances AS ib(
+          warehouse_id
+        , product_id
+        , unit_id
+        , quantity
+        , amount
+    )
+	VALUES (
+          @WarehouseId
+        , @ProductId
+        , @UnitId
+        , @Quantity
+        , @Amount
+    )
+    ON CONFLICT (warehouse_id, product_id, unit_id)
+    DO UPDATE SET 
+          quantity = ib.quantity + EXCLUDED.quantity
+        , amount = ib.amount + EXCLUDED.amount
     ";
 
-    const string DELETE_LINES_SQL = @"
-    DELETE FROM goods_receipt_lines
-    WHERE document_id = @DocumentId AND product_id = @ProductId  AND unit_id = @UnitId;
-    ";
-
-    const string UPDATE_LINES_SQL = @"
-    UPDATE public.goods_receipt_lines
-	SET product_id = @ProductId
-    , unit_id = @UnitId
-    , document_quantity = @DocumentQuantity
-    , actual_quantity = @ActualQuantity
-    , amount = @Amount
-    , sort_order = @SortOrder
-    , note = @Note
-    , unit_price = @UnitPrice
-	WHERE document_id = @DocumentId AND product_id = @ProductId  AND unit_id = @UnitId;
-    ";
-
-    const string GET_WAREHOUSE_ID_SQL = @"
-    SELECT warehouse_id
-    FROM goods_receipts
-    WHERE document_id = @DocumentId;
+    const string GET_OLD_STATUS = @"
+    SELECT status
+    FROM documents WHERE document_id = @DocumentId;
     ";
 
     public async Task Handle(UpdateGoodsReceiptCommand request, CancellationToken cancellationToken)
     {
-        // Check posting date
+        // Kiểm tra posting date có nằm trong khoảng của kỳ kế toán hay không
         bool isValidPostingDate = await _dbSession.Connection.ExecuteScalarAsync<bool>(DocumentSqls.CHECK_POSTINGDATE_SQL, new
         {
             PeriodId = request.PeriodId,
@@ -111,7 +131,15 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
             throw new BusinessException("invalid_postingdate");
         }
 
-        // Update documents table
+        // Lấy trạng thái hiện tại của phiếu
+        var oldStatus = await _dbSession.Connection.ExecuteScalarAsync<string>(GET_OLD_STATUS, new
+        {
+            DocumentId = request.DocumentId
+        }, _dbSession.Transaction);
+
+        // Nếu phiếu đã ở trạng thái posted thì không cho cập nhật trạng thái
+        string newStatus = oldStatus == DocumentStatus.POSTED.ToString() ? oldStatus : request.Status.ToString();
+        
         await _dbSession.Connection.ExecuteAsync(DocumentSqls.UPDATE_DOCUMENT_SQL, new UpdateDocumentParams
         {
             DocumentId = request.DocumentId,
@@ -120,16 +148,15 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
             PeriodId = request.PeriodId,
             UpdatedBy = _currentUser.UserId,
             Note = request.Note,
-            Status = request.Status.ToString()
+            Status = newStatus
         }, _dbSession.Transaction);
 
-        // Update master table
+        // Update bảng goods_receipts
         await _dbSession.Connection.ExecuteAsync(UPDATE_MASTER_SQL, new
         {
             DocumentId = request.DocumentId,
             ShipperName = request.ShipperName
         }, _dbSession.Transaction);
-
 
         var dbLines = await _dbSession.Connection.QueryAsync<GoodsReceiptLineRow>(GET_LINES_SQL, new
         {
@@ -139,82 +166,60 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
         var deletedRows = dbLines.ExceptBy(request.Lines.Select(p => (p.ProductId, p.UnitId)), p => (p.ProductId, p.UnitId))
             .ToList();
 
-        var insertRows = request.Lines.ExceptBy(dbLines.Select(p => (p.ProductId, p.UnitId)), p => (p.ProductId, p.UnitId))
-            .ToList();
+        if (deletedRows.Any())
+        {
+            await _dbSession.Connection.ExecuteAsync(DELETE_LINE_SQL, deletedRows, _dbSession.Transaction);
+        }
 
-        var updateRows = dbLines.Join(request.Lines
-            , db => (db.ProductId, db.UnitId)
-            , req => (req.ProductId, req.UnitId)
-            , (db, req) => new
+        var upsertRows = request.Lines.Select(p => new
+        {
+            DocumentId = request.DocumentId,
+            ProductId = p.ProductId,
+            UnitId = p.UnitId,
+            ActualQuantity = p.ActualQuantity,
+            DocumentQuantity = p.DocumentQuantity,
+            Amount = p.Amount,
+            SortOrder = p.SortOrder,
+            Note = p.Note,
+            UnitPrice = p.UnitPrice
+        });
+
+        if (upsertRows.Any())
+        {
+            await _dbSession.Connection.ExecuteAsync(UPSERT_LINE_SQL, upsertRows, _dbSession.Transaction);
+        }
+
+        // Nếu trạng thái của phiếu là POSTED thì mới cập nhật số dư
+        if (newStatus == DocumentStatus.POSTED.ToString())
+        {
+            int warehouseId = await _dbSession.Connection.ExecuteScalarAsync<int>(GET_WAREHOUSE_ID_SQL, new
             {
-                DocumentId = request.DocumentId,
-                ProductId = req.ProductId,
-                UnitId = req.UnitId,
-                DocumentQuantity = req.DocumentQuantity,
-                ActualQuantity = req.ActualQuantity,
-                Amount = req.Amount,
-                SortOrder = req.SortOrder,
-                Note = req.Note,
-                UnitPrice = req.UnitPrice,
-                DocumentQuantityDelta = req.DocumentQuantity - db.DocumentQuantity,
-                ActualQuantityDelta = req.ActualQuantity - db.ActualQuantity,
-                AmountDelta = req.Amount - db.Amount
+                DocumentId = request.DocumentId
+            }, _dbSession.Transaction);
+
+            var upsertBalances = deletedRows
+            .Select(p => new
+            {
+                WarehouseId = warehouseId,
+                ProductId = p.ProductId,
+                UnitId = p.UnitId,
+                Quantity = -p.ActualQuantity,
+                Amount = -p.Amount
             })
+            .Union(upsertRows.LeftJoin(dbLines
+                , p => (p.ProductId, p.UnitId)
+                , p => (p.ProductId, p.UnitId)
+                , (req, db) => new
+                {
+                    WarehouseId = warehouseId,
+                    ProductId = req.ProductId,
+                    UnitId = req.UnitId,
+                    Quantity = req.ActualQuantity - (db != null ? db.ActualQuantity : 0),
+                    Amount = req.Amount - (db != null ? db.Amount : 0),
+                }))
             .ToList();
 
-        var updateBalanceLines = new List<UpdateInventoryBalanceParams>();
-
-        int warehouseId = await _dbSession.Connection.ExecuteScalarAsync<int>(GET_WAREHOUSE_ID_SQL, new
-        {
-            DocumentId = request.DocumentId
-        }, _dbSession.Transaction);
-
-        if (deletedRows.Count > 0)
-        {
-            updateBalanceLines.AddRange(deletedRows.Select(p => new UpdateInventoryBalanceParams
-            {
-                WarehouseId = warehouseId,
-                ProductId = p.ProductId,
-                UnitId = p.UnitId,
-                QuantityDelta = -p.ActualQuantity,
-                AmountDelta = -p.Amount
-            }));
-
-            await _dbSession.Connection.ExecuteAsync(DELETE_LINES_SQL, deletedRows, _dbSession.Transaction);
-        }
-
-        if (updateRows.Count > 0)
-        {
-            updateBalanceLines.AddRange(updateRows.Select(p => new UpdateInventoryBalanceParams
-            {
-                WarehouseId = warehouseId,
-                ProductId = p.ProductId,
-                UnitId = p.UnitId,
-                QuantityDelta = p.ActualQuantityDelta,
-                AmountDelta = p.AmountDelta
-            }));
-
-            await _dbSession.Connection.ExecuteAsync(UPDATE_LINES_SQL, updateRows, _dbSession.Transaction);
-        }
-
-        if (insertRows.Count > 0)
-        {
-            updateBalanceLines.AddRange(insertRows.Select(p => new UpdateInventoryBalanceParams
-            {
-                WarehouseId = warehouseId,
-                ProductId = p.ProductId,
-                UnitId = p.UnitId,
-                QuantityDelta = p.ActualQuantity,
-                AmountDelta = p.Amount
-            }));
-
-            await _dbSession.Connection.ExecuteAsync(INSERT_LINES_SQL, insertRows, _dbSession.Transaction);
-        }
-
-        if (updateBalanceLines.Count > 0)
-        {
-            await _dbSession.Connection.ExecuteAsync(InventoryBalanceSqls.UPDATE_INVENTORY_BALANCE_SQL
-                , updateBalanceLines, _dbSession.Transaction);
+            await _dbSession.Connection.ExecuteAsync(UPSERT_INVENTORY_BALANCE_SQL, upsertBalances, _dbSession.Transaction);
         }
     }
 }

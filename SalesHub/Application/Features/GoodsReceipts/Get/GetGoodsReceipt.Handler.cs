@@ -37,7 +37,7 @@ public class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuery, GetG
 		, users_updated.username AS UpdatedUsername
 		, documents.updated_at AS UpdatedAt
     FROM documents
-    INNER JOIN goods_receipts ON documents.document_id = documents.document_id
+    INNER JOIN goods_receipts ON goods_receipts.document_id = documents.document_id
     INNER JOIN periods ON periods.period_id = documents.period_id
     INNER JOIN users AS users_created ON users_created.user_id = documents.created_by
     INNER JOIN warehouses ON warehouses.warehouse_id = goods_receipts.warehouse_id

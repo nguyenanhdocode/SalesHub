@@ -42,7 +42,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
 
     const string INSERT_LINES_SQL = @"
     INSERT INTO public.goods_receipt_lines(
-	    document_id
+	      document_id
         , product_id
         , unit_id
         , document_quantity
@@ -53,7 +53,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
         , unit_price
     )
 	VALUES (
-	    @DocumentId
+	      @DocumentId
         , @ProductId
         , @UnitId
         , @DocumentQuantity
@@ -65,8 +65,30 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
     )
     ";
 
+    public const string UPSERT_INVENTORY_BALANCE_SQL = @"
+    INSERT INTO public.inventory_balances AS ib(
+          warehouse_id
+        , product_id
+        , unit_id
+        , quantity
+        , amount
+    )
+	VALUES (
+          @WarehouseId
+        , @ProductId
+        , @UnitId
+        , @Quantity
+        , @Amount
+    )
+    ON CONFLICT (warehouse_id, product_id, unit_id)
+    DO UPDATE SET 
+          quantity = ib.quantity + EXCLUDED.quantity
+        , amount = ib.amount + EXCLUDED.amount
+    ";
+
     public async Task<CreateDocumentResponse> Handle(CreateGoodsReceiptCommand request, CancellationToken cancellationToken)
     {
+        // Kiểm tra posting date có nằm trong khoảng của kỳ kế toán hay không
         bool isValidPostingDate = await _dbSession.Connection.ExecuteScalarAsync<bool>(DocumentSqls.CHECK_POSTINGDATE_SQL, new
         {
             PeriodId = request.PeriodId,
@@ -81,6 +103,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
         var id = Guid.CreateVersion7();
         var docNo = await _docNoService.GetNextDocumentNo("GR", request.DocumentDate.Year, request.DocumentDate.Month);
 
+        // Insert dữ liệu bảng documents
         await _dbSession.Connection.ExecuteAsync(DocumentSqls.INSERT_DOCUMENT_SQL, new CreateDocumentParams
         {
               DocumentId = id
@@ -94,6 +117,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
             , Status = request.Status.ToString()
         }, _dbSession.Transaction);
 
+        // Insert bảng goods_receipts
         await _dbSession.Connection.ExecuteAsync(INSERT_MASTER_SQL, new
         {
               DocumentId = id
@@ -114,6 +138,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
             , UnitPrice = p.UnitPrice
         });
 
+        // Insert lines
         await _dbSession.Connection.ExecuteAsync(INSERT_LINES_SQL, lines, _dbSession.Transaction);
 
         var balances = request.Lines.Select(p => new InventoryBalanceParams
@@ -125,7 +150,8 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
             , Amount = p.Amount
         });
 
-        await _dbSession.Connection.ExecuteAsync(InventoryBalanceSqls.UPSERT_INVENTORY_BALANCE_SQL
+        // Cập nhật lại bảng số dư (inventory_balances)
+        await _dbSession.Connection.ExecuteAsync(UPSERT_INVENTORY_BALANCE_SQL
             , balances, _dbSession.Transaction);
 
         return new CreateDocumentResponse
