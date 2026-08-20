@@ -1,5 +1,7 @@
 using Application.Features.GoodsIssues.Create;
 using Application.Features.GoodsIssues.Delete;
+using Application.Features.GoodsIssues.Get;
+using Application.Features.GoodsIssues.List;
 using Application.Features.GoodsIssues.Update;
 using Application.Features.GoodsReceipts.Create;
 using Application.Features.GoodsReceipts.Get;
@@ -44,24 +46,24 @@ namespace MyApp.Namespace
             return Results.Ok();
         }
 
-        // [HttpGet]
-        // [Authorize]
-        // public async Task<IResult> List([FromQuery] ListGoodsReceiptsQuery command, CancellationToken cancellationToken)
-        // {
-        //     var data = await _sender.Send(command, cancellationToken);
+        [HttpGet]
+        [Authorize]
+        public async Task<IResult> List([FromQuery] ListGoodsIssueQuery command, CancellationToken cancellationToken)
+        {
+            var data = await _sender.Send(command, cancellationToken);
 
-        //     return Results.Ok(data);
-        // }
+            return Results.Ok(data);
+        }
 
-        // [HttpGet]
-        // [Authorize]
-        // [Route("{documentId}")]
-        // public async Task<IResult> Get(Guid documentId, CancellationToken cancellationToken)
-        // {
-        //     var row = await _sender.Send(new GetGoodsReceiptQuery { DocumentId = documentId }, cancellationToken);
+        [HttpGet]
+        [Authorize]
+        [Route("{documentId}")]
+        public async Task<IResult> Get(Guid documentId, CancellationToken cancellationToken)
+        {
+            var row = await _sender.Send(new GetGoodsIssueQuery { DocumentId = documentId }, cancellationToken);
 
-        //     return Results.Ok(row);
-        // }
+            return Results.Ok(row);
+        }
 
         [HttpDelete]
         [Route("{documentId}")]

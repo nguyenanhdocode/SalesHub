@@ -1,8 +1,6 @@
-using Application.Models.Documents;
+namespace Application.Features.GoodsIssues.Get;
 
-namespace Application.Features.GoodsReceipts.Get;
-
-public class GetGoodsReceiptResponse
+public class GetGoodsIssueResponse
 {
     public Guid DocumentId {get;set;}
     public string DocumentNo {get;set;} = null!;
@@ -18,9 +16,9 @@ public class GetGoodsReceiptResponse
     public DateTime? UpdatedAt {get;set;}
     public string? UpdatedUsername {get;set;}
     public string Status {get;set;} = null!;
-    public string ShipperName {get;set;} = null!;
+    public string? Reason {get;set;}
     public int WarehouseId {get;set;}
     public string WarehouseCode {get;set;} = null!;
     public string WarehouseName {get;set;} = null!;
-    public List<GetGoodsReceiptLineResponse> Lines {get;set;} = [];
+    public List<GetGoodsIssueLineResponse> Lines {get;set;} = [];
 }

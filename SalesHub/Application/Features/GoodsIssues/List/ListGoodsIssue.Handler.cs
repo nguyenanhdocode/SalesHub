@@ -6,13 +6,13 @@ using Application.Models.Common;
 using Dapper;
 using MediatR;
 
-namespace Application.Features.GoodsReceipts.List;
+namespace Application.Features.GoodsIssues.List;
 
-public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, PagedResult<GoodsReceiptListItem>>
+public class ListGoodsIssueHandler : IRequestHandler<ListGoodsIssueQuery, PagedResult<GoodsIssueListItem>>
     , ITransactionalRequest
 {
     private readonly DbSession _dbSession;
-    public ListGoodsReceiptsHandler(DbSession dbSession)
+    public ListGoodsIssueHandler(DbSession dbSession)
     {
         _dbSession = dbSession;
     }
@@ -32,18 +32,18 @@ public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, 
         , users.username AS CreatedUsername
         , documents.deleted_at AS DeletedAt
         , documents.status AS Status
-        , goods_receipts.shipper_name AS ShipperName
-        , goods_receipts.warehouse_id AS WarehouseId
+        , goods_issues.reason AS Reason
+        , goods_issues.warehouse_id AS WarehouseId
         , warehouses.code AS WarehouseCode
         , warehouses.name AS WarehouseName
         , warehouses.branch_id AS BranchId
         , branchs.code AS BranchCode
         , branchs.name AS BranchName
     FROM documents
-    INNER JOIN goods_receipts ON goods_receipts.document_id = documents.document_id
+    INNER JOIN goods_issues ON goods_issues.document_id = documents.document_id
     INNER JOIN periods ON periods.period_id = documents.period_id
     INNER JOIN users ON users.user_id = documents.created_by
-    INNER JOIN warehouses ON warehouses.warehouse_id = goods_receipts.warehouse_id
+    INNER JOIN warehouses ON warehouses.warehouse_id = goods_issues.warehouse_id
     INNER JOIN branchs ON branchs.branch_id = warehouses.branch_id
     WHERE 1=1
     ";
@@ -52,13 +52,13 @@ public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, 
     SELECT
         COUNT(1)
     FROM documents
-    INNER JOIN goods_receipts ON goods_receipts.document_id = documents.document_id
+    INNER JOIN goods_issues ON goods_issues.document_id = documents.document_id
     INNER JOIN users ON users.user_id = documents.created_by
-    INNER JOIN warehouses ON warehouses.warehouse_id = goods_receipts.warehouse_id
+    INNER JOIN warehouses ON warehouses.warehouse_id = goods_issues.warehouse_id
     WHERE 1=1
     ";
 
-    public async Task<PagedResult<GoodsReceiptListItem>> Handle(ListGoodsReceiptsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<GoodsIssueListItem>> Handle(ListGoodsIssueQuery request, CancellationToken cancellationToken)
     {
         var filterBuilder = new StringBuilder();
 
@@ -126,10 +126,10 @@ public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, 
             parameters.Add("CreatedBy", $"%{request.CreatedBy}%");
         }
 
-        if (!string.IsNullOrEmpty(request.ShipperName))
+        if (!string.IsNullOrEmpty(request.Reason))
         {
-            filterBuilder.AppendLine("AND goods_receipts.shipper_name ILIKE @ShipperName");
-            parameters.Add("ShipperName", $"%{request.ShipperName}%");
+            filterBuilder.AppendLine("AND reason.shipper_name ILIKE @Reason");
+            parameters.Add("Reason", $"%{request.Reason}%");
         }
 
         var counterQuery = new StringBuilder(COUNTER_SQL);
@@ -144,8 +144,8 @@ public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, 
         parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
         parameters.Add("PageSize", request.PageSize);
 
-        var data = await _dbSession.Connection.QueryAsync<GoodsReceiptListItem>(dataQuery.ToString(), parameters);
+        var data = await _dbSession.Connection.QueryAsync<GoodsIssueListItem>(dataQuery.ToString(), parameters);
 
-        return new PagedResult<GoodsReceiptListItem>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<GoodsIssueListItem>(data, totalPages, request.PageNum, request.PageSize);
     }
 }

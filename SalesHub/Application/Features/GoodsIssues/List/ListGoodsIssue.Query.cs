@@ -5,9 +5,9 @@ using Application.Models.Common;
 using Application.Shared;
 using MediatR;
 
-namespace Application.Features.GoodsReceipts.List;
+namespace Application.Features.GoodsIssues.List;
 
-public class ListGoodsReceiptsQuery : IRequest<PagedResult<GoodsReceiptListItem>>, ITransactionalRequest
+public class ListGoodsIssueQuery : IRequest<PagedResult<GoodsIssueListItem>>, ITransactionalRequest
     , IPaginable
 {
     public string? DocumentNo {get;set;}
@@ -15,7 +15,7 @@ public class ListGoodsReceiptsQuery : IRequest<PagedResult<GoodsReceiptListItem>
     public DateTime? FromDate {get;set;}
     public DateTime? ToDate {get;set;}
     public string? CreatedBy {get;set;}
-    public string? ShipperName {get;set;}
+    public string? Reason {get;set;}
     public List<int> WarehouseIds {get;set;} = [];
     public List<int> BranchIds {get;set;} = [];
     public bool FilterByPeriod {get;set;}

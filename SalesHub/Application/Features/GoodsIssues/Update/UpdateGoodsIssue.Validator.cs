@@ -7,7 +7,6 @@ public class UpdateGoodsIssuesValidator : UpdateDocumentValidator<UpdateGoodsIss
 {
     public UpdateGoodsIssuesValidator()
     {
-        RuleFor(p => p.WarehouseId).NotNull();
         RuleFor(p => p.Reason).NotNull().NotEmpty().MaximumLength(1000);
     }
 }
