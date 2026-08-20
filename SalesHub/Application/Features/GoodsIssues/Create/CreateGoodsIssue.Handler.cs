@@ -61,10 +61,8 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
     ";
 
     const string UPDATE_BALANCE_SQL = @"
-    WITH updated AS (
-        UPDATE inventory_balances AS target
-        SET quantity = quantity - x.Quantity
-            , amount = amount - x.Amount
+    WITH lines AS (
+        SELECT *
         FROM jsonb_to_record(@Lines::jsonb) AS x (
             WarehouseId int,
             ProductId int,
@@ -72,13 +70,22 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
             Quantity int,
             Amount numeric
         )
-        WHERE target.warehouse_id = x.WarehouseId AND target.product_id = x.product_id
-        AND target.unit_id = x.unit_id
-        RETURNING target.product_id, target.quantity
     )
-    SELECT DISTINCT product_id
-    FROM updated
-    WHERE quantity < 0;
+    , updated AS (
+        UPDATE inventory_balances AS target
+        SET quantity = quantity - x.Quantity
+            , amount = amount - x.Amount
+        WHERE target.warehouse_id = lines.WarehouseId 
+            AND target.product_id = lines.product_id
+            AND target.unit_id = lines.unit_id
+        RETURNING target.warehouse_id, target.product_id, target.quantity
+    )
+    SELECT DISTINCT lines.product_id
+    FROM lines
+    LEFT JOIN updated ON updated.warehouse_id = lines.warehouse_id
+    AND updated.product_id = lines.product_id
+    AND updated.unit_id = lines.unit_id
+    WHERE updated.product_id IS NULL OR COALESCE(updated.quantity, -1) < 0
     ";
 
     public async Task<CreateDocumentResponse> Handle(CreateGoodsIssueCommand request, CancellationToken cancellationToken)

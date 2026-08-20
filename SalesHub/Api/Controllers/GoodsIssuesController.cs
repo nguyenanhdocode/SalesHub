@@ -1,4 +1,5 @@
 using Application.Features.GoodsIssues.Create;
+using Application.Features.GoodsIssues.Update;
 using Application.Features.GoodsReceipts.Create;
 using Application.Features.GoodsReceipts.Get;
 using Application.Features.GoodsReceipts.List;
@@ -30,17 +31,17 @@ namespace MyApp.Namespace
             return Results.Ok(result);
         }
 
-        // [HttpPut]
-        // [Route("{documentId}")]
-        // [Authorize]
-        // public async Task<IResult> Update(string documentId, [FromBody] UpdateGoodsReceiptCommand command
-        // , CancellationToken cancellationToken)
-        // {
-        //     command.DocumentId = Guid.Parse(documentId);
-        //     await _sender.Send(command, cancellationToken);
+        [HttpPut]
+        [Route("{documentId}")]
+        [Authorize]
+        public async Task<IResult> Update(string documentId, [FromBody] UpdateGoodsIssueCommand command
+        , CancellationToken cancellationToken)
+        {
+            command.DocumentId = Guid.Parse(documentId);
+            await _sender.Send(command, cancellationToken);
 
-        //     return Results.Ok();
-        // }
+            return Results.Ok();
+        }
 
         // [HttpGet]
         // [Authorize]
