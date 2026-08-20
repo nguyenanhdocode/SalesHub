@@ -61,12 +61,24 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
     ";
 
     const string UPDATE_BALANCE_SQL = @"
-    UPDATE inventory_balances
-    SET quantity = quantity - @ActualQuantity
-        , amount = amount - @Amount
-    WHERE warehouse_id = @WarehouseId AND product_id = @ProductId AND unit_id = @UnitId
-    AND quantity >= @ActualQuantity AND amount >= @Amount
-    RETURNING true;
+    WITH updated AS (
+        UPDATE inventory_balances AS target
+        SET quantity = quantity - x.Quantity
+            , amount = amount - x.Amount
+        FROM jsonb_to_record(@Lines::jsonb) AS x (
+            WarehouseId int,
+            ProductId int,
+            UnitId int,
+            Quantity int,
+            Amount numeric
+        )
+        WHERE target.warehouse_id = x.WarehouseId AND target.product_id = x.product_id
+        AND target.unit_id = x.unit_id
+        RETURNING target.product_id, target.quantity
+    )
+    SELECT DISTINCT product_id
+    FROM updated
+    WHERE quantity < 0;
     ";
 
     public async Task<CreateDocumentResponse> Handle(CreateGoodsIssueCommand request, CancellationToken cancellationToken)
@@ -122,18 +134,26 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
 
         await _dbSession.Connection.ExecuteAsync(INSERT_LINES_SQL, lines, _dbSession.Transaction);
 
-        var updateBalances = request.Lines.Select(p => new InventoryBalanceParams
+        if (request.Status == DocumentStatus.POSTED)
         {
-            WarehouseId = request.WarehouseId,
-            ProductId = p.ProductId,
-            UnitId = p.UnitId,
-            Quantity = -p.ActualQuantity,
-            Amount = -p.Amount
-        });
+            var updateBalances = request.Lines.Select(p => new
+            {
+                WarehouseId = request.WarehouseId,
+                ProductId = p.ProductId,
+                UnitId = p.UnitId,
+                ActualQuantity = p.ActualQuantity,
+                Amount = p.Amount
+            });
 
-        var res = await _dbSession.Connection.ExecuteScalarAsync<bool>(UPDATE_BALANCE_SQL
-            , updateBalances
-            , _dbSession.Transaction);
+            var failedRows = await _dbSession.Connection.QueryAsync<int>(UPDATE_BALANCE_SQL
+                , updateBalances
+                , _dbSession.Transaction);
+
+            if (failedRows.Any())
+            {
+                throw new BusinessException("insufficient_inventory");
+            }
+        }
 
         return new CreateDocumentResponse
         {
