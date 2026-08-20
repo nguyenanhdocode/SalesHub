@@ -1,4 +1,7 @@
 using Application.Database;
+using Application.Exceptions;
+using Application.Models.InventoryBalances;
+using Application.Shared;
 using Dapper;
 using MediatR;
 
@@ -9,7 +12,7 @@ public class DeleteGoodsReceiptHandler : IRequestHandler<DeleteGoodsReceiptComma
     private readonly DbSession _dbSession;
     public DeleteGoodsReceiptHandler(DbSession dbSession)
     {
-        _dbSession = dbSession;        
+        _dbSession = dbSession;
     }
 
     const string DELETE_SQL = @"
@@ -19,34 +22,38 @@ public class DeleteGoodsReceiptHandler : IRequestHandler<DeleteGoodsReceiptComma
     ";
 
     const string UPDATE_BALANCES_SQL = @"
-        UPDATE inventory_balances AS target
+    WITH lines AS (
+        SELECT
+            goods_receipts.warehouse_id
+            , goods_receipt_lines.product_id
+            , goods_receipt_lines.unit_id
+            , goods_receipt_lines.actual_quantity
+            , goods_receipt_lines.amount
+        FROM goods_receipt_lines
+        INNER JOIN goods_receipts ON goods_receipts.document_id = goods_receipt_lines.document_id
+        WHERE goods_receipt_lines.document_id = @DocumentId 
+    )
+    , updated AS (
+        UPDATE inventory_balances AS ib
         SET
-            quantity = target.quantity - source.actual_quantity
-            , amount = target.amount - source.amount
-        FROM (
-            SELECT
-                gr.warehouse_id
-                , line.product_id
-                , line.unit_id
-                , SUM(line.actual_quantity) AS actual_quantity
-                , SUM(line.amount) AS amount
-            FROM goods_receipt_lines AS line
-            INNER JOIN goods_receipts AS gr ON gr.document_id = line.document_id
-            WHERE line.document_id = @DocumentId
-            GROUP BY gr.warehouse_id, line.product_id, line.unit_id
-        ) AS source
-        WHERE target.warehouse_id = source.warehouse_id
-        AND target.product_id = source.product_id
-        AND target.unit_id = source.unit_id
-        AND target.quantity >= source.actual_quantity
-        AND target.amount >= source.amount
-        RETURNING target.warehouse_id, target.product_id, target.unit_id;
+        FROM lines 
+        WHERE ib.warehouse_id = lines.warehouse_id AND ib.product_id = lines.product_id
+        AND ib.unit_id = lines.unit_id AND ib.quantity >= lines.actual_quantity
+        AND ib.amount >= lines.amount
+        RETURNING ib.warehouse_id, ib.product_id, ib.unit_id
+    )
+    SELECT
+        lines.product_id
+        , lines.unit_id
+    FROM lines
+    LEFT JOIN updated ON updated.warehouse_id = lines.warehouse_id
+        AND updated.product_id = lines.product_id
+        AND updated.uint_id = lines.unit_id
+    WHERE updated.product_id IS NULL
     ";
 
-    const string GET_LINE_COUNT = @"
-    SELECT COUNT(1) 
-    FROM goods_receipt_lines
-    WHERE document_id = @DocumentId
+    const string GET_STATUS_SQL = @"
+    SELECT status FROM documents WHERE document_id = @DocumentId;
     ";
 
     public async Task Handle(DeleteGoodsReceiptCommand request, CancellationToken cancellationToken)
@@ -56,19 +63,22 @@ public class DeleteGoodsReceiptHandler : IRequestHandler<DeleteGoodsReceiptComma
             DocumentId = request.DocumentId
         }, _dbSession.Transaction);
 
-        int lineCount = await _dbSession.Connection.ExecuteScalarAsync<int>(GET_LINE_COUNT, new
+        string? status = await _dbSession.Connection.ExecuteScalarAsync<string>(GET_STATUS_SQL, new
         {
             DocumentId = request.DocumentId
         }, _dbSession.Transaction);
 
-        int affectedRows = await _dbSession.Connection.ExecuteAsync(UPDATE_BALANCES_SQL, new
+        if (status == DocumentStatus.POSTED.ToString())
         {
-            DocumentId = request.DocumentId
-        }, _dbSession.Transaction);
+            var failedRows = await _dbSession.Connection.QueryAsync<object>(UPDATE_BALANCES_SQL, new
+            {
+                DocumentId = request.DocumentId
+            }, _dbSession.Transaction);
 
-        if (affectedRows != lineCount)
-        {
-            throw new Exception("update_balances_failed");
+            if (failedRows.Any())
+            {
+                throw new BusinessException("insufficient_inventory");
+            }
         }
     }
 }

@@ -106,36 +106,54 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
         // Insert dữ liệu bảng documents
         await _dbSession.Connection.ExecuteAsync(DocumentSqls.INSERT_DOCUMENT_SQL, new CreateDocumentParams
         {
-              DocumentId = id
-            , DocumentNo = docNo
-            , PostingDate = request.PostingDate
-            , DocumentDate = request.DocumentDate
-            , PeriodId = request.PeriodId
-            , DocumentType = DocumentType.NK.ToString()
-            , CreatedBy = _currentUser.UserId
-            , Note = request.Note
-            , Status = request.Status.ToString()
+            DocumentId = id
+            ,
+            DocumentNo = docNo
+            ,
+            PostingDate = request.PostingDate
+            ,
+            DocumentDate = request.DocumentDate
+            ,
+            PeriodId = request.PeriodId
+            ,
+            DocumentType = DocumentType.NK.ToString()
+            ,
+            CreatedBy = _currentUser.UserId
+            ,
+            Note = request.Note
+            ,
+            Status = request.Status.ToString()
         }, _dbSession.Transaction);
 
         // Insert bảng goods_receipts
         await _dbSession.Connection.ExecuteAsync(INSERT_MASTER_SQL, new
         {
-              DocumentId = id
-            , ShipperName = request.ShipperName
-            , WarehouseId = request.WarehouseId
+            DocumentId = id
+            ,
+            ShipperName = request.ShipperName
+            ,
+            WarehouseId = request.WarehouseId
         }, _dbSession.Transaction);
 
         var lines = request.Lines.Select(p => new
         {
-              DocumentId = id
-            , ProductId = p.ProductId
-            , UnitId = p.UnitId
-            , DocumentQuantity = p.DocumentQuantity
-            , ActualQuantity = p.ActualQuantity
-            , Amount = p.Amount
-            , SortOrder = p.SortOrder
-            , Note = p.Note
-            , UnitPrice = p.UnitPrice
+            DocumentId = id
+            ,
+            ProductId = p.ProductId
+            ,
+            UnitId = p.UnitId
+            ,
+            DocumentQuantity = p.DocumentQuantity
+            ,
+            ActualQuantity = p.ActualQuantity
+            ,
+            Amount = p.Amount
+            ,
+            SortOrder = p.SortOrder
+            ,
+            Note = p.Note
+            ,
+            UnitPrice = p.UnitPrice
         });
 
         // Insert lines
@@ -143,16 +161,23 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
 
         var balances = request.Lines.Select(p => new InventoryBalanceParams
         {
-              WarehouseId = request.WarehouseId
-            , ProductId = p.ProductId
-            , UnitId = p.UnitId
-            , Quantity = p.ActualQuantity
-            , Amount = p.Amount
+            WarehouseId = request.WarehouseId
+            ,
+            ProductId = p.ProductId
+            ,
+            UnitId = p.UnitId
+            ,
+            Quantity = p.ActualQuantity
+            ,
+            Amount = p.Amount
         });
 
-        // Cập nhật lại bảng số dư (inventory_balances)
-        await _dbSession.Connection.ExecuteAsync(UPSERT_INVENTORY_BALANCE_SQL
-            , balances, _dbSession.Transaction);
+        if (request.Status == DocumentStatus.POSTED)
+        {
+            // Cập nhật lại bảng số dư (inventory_balances)
+            await _dbSession.Connection.ExecuteAsync(UPSERT_INVENTORY_BALANCE_SQL
+                , balances, _dbSession.Transaction);
+        }
 
         return new CreateDocumentResponse
         {

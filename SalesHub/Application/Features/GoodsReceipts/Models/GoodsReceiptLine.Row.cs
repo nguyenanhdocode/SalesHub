@@ -1,4 +1,4 @@
-namespace Application.Features.GoodsReceipts.Update;
+namespace Application.Features.GoodsReceipts.Models;
 
 public class GoodsReceiptLineRow
 {

@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Data;
+using System.Text.Json;
 using Application.Database;
 using Application.Exceptions;
+using Application.Features.GoodsReceipts.Models;
 using Application.Models.Documents;
 using Application.Models.InventoryBalances;
 using Application.Services;
@@ -92,24 +94,33 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
     ";
 
     public const string UPSERT_INVENTORY_BALANCE_SQL = @"
-    INSERT INTO public.inventory_balances AS ib(
-          warehouse_id
-        , product_id
-        , unit_id
-        , quantity
-        , amount
+    WITH upserted AS (
+        INSERT INTO inventory_balances
+        (
+              warehouse_id
+            , product_id
+            , unit_id
+            , quantity
+            , amount
+        )
+        SELECT
+        FROM jsonb_to_recordset(@Lines::jsonb) AS x (
+            WarehouseId int,
+            ProductId int,
+            UnitId int,
+            Quantity int,
+            Amount numeric
+        )
+        ON CONFLICT (warehouse_id, product_id, unit_id)
+        DO UPDATE SET
+              quantity = ib.quantity + EXCLUDED.quantity
+            , amount   = ib.amount + EXCLUDED.amount
+        RETURNING warehouse_id, product_id, unit_id, quantity
     )
-	VALUES (
-          @WarehouseId
-        , @ProductId
-        , @UnitId
-        , @Quantity
-        , @Amount
-    )
-    ON CONFLICT (warehouse_id, product_id, unit_id)
-    DO UPDATE SET 
-          quantity = ib.quantity + EXCLUDED.quantity
-        , amount = ib.amount + EXCLUDED.amount
+    SELECT
+        DISTINCT product_id
+    FROM upserted
+    WHERE quantity < 0;
     ";
 
     const string GET_OLD_STATUS = @"
@@ -219,7 +230,17 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
                 }))
             .ToList();
 
-            await _dbSession.Connection.ExecuteAsync(UPSERT_INVENTORY_BALANCE_SQL, upsertBalances, _dbSession.Transaction);
+            var failedRows = await _dbSession.Connection.QueryAsync<int>(UPSERT_INVENTORY_BALANCE_SQL
+                , new
+                {
+                    Lines = JsonSerializer.Serialize(upsertBalances)
+                }
+                , _dbSession.Transaction);
+
+            if (failedRows.Any())
+            {
+                throw new BusinessException("insufficient_inventory");
+            }
         }
     }
 }
