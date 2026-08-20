@@ -4,6 +4,7 @@ using System.Text.Json;
 using Application.Database;
 using Application.Exceptions;
 using Application.Features.GoodsReceipts.Models;
+using Application.Interfaces.Security;
 using Application.Models.Documents;
 using Application.Models.InventoryBalances;
 using Application.Services;
@@ -18,11 +19,11 @@ namespace Application.Features.GoodsReceipts.Update;
 public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptCommand>
 {
     private readonly DbSession _dbSession;
-    private readonly CurrentUser _currentUser;
+    private readonly ICurrentUser _currentUser;
     private readonly DocumentNoService _docNoService;
 
     public UpdateGoodsReceiptHandler(DbSession dbSession
-        , CurrentUser currentUser
+        , ICurrentUser currentUser
         , DocumentNoService documentNoService)
     {
         _dbSession = dbSession;

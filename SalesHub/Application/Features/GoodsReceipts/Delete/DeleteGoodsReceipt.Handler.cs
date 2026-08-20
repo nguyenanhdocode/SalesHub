@@ -1,5 +1,6 @@
 using Application.Database;
 using Application.Exceptions;
+using Application.Interfaces.Security;
 using Application.Models.InventoryBalances;
 using Application.Shared;
 using Dapper;
@@ -11,10 +12,10 @@ namespace Application.Features.GoodsReceipts.Delete;
 public class DeleteGoodsReceiptHandler : IRequestHandler<DeleteGoodsReceiptCommand>
 {
     private readonly DbSession _dbSession;
-    private readonly CurrentUser _currentUser;
+    private readonly ICurrentUser _currentUser;
 
     public DeleteGoodsReceiptHandler(DbSession dbSession
-        , CurrentUser currentUser)
+        , ICurrentUser currentUser)
     {
         _dbSession = dbSession;
         _currentUser = currentUser;

@@ -1,5 +1,6 @@
 using Application.Database;
 using Application.Exceptions;
+using Application.Interfaces.Security;
 using Application.Shared;
 using Dapper;
 using Infrastructure.Security;
@@ -10,10 +11,10 @@ namespace Application.Features.GoodsIssues.Delete;
 public class DeleteGoodsIssueHandle : IRequestHandler<DeleteGoodsIssueCommand>
 {
     private readonly DbSession _dbSession;
-    private readonly CurrentUser _currentUser;
+    private readonly ICurrentUser _currentUser;
 
     public DeleteGoodsIssueHandle(DbSession dbSession
-        , CurrentUser currentUser)
+        , ICurrentUser currentUser)
     {
         _dbSession = dbSession;
         _currentUser = currentUser;

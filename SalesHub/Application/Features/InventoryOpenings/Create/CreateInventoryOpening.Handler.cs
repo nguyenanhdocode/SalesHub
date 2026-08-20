@@ -1,4 +1,5 @@
 using Application.Database;
+using Application.Interfaces.Security;
 using Application.Models.Documents;
 using Application.Models.InventoryBalances;
 using Application.Services;
@@ -12,11 +13,11 @@ namespace Application.Features.InventoryOpenings.Create;
 public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpeningCommand, CreateDocumentResponse>
 {
     private readonly DbSession _dbSession;
-    private readonly CurrentUser _currentUser;
+    private readonly ICurrentUser _currentUser;
     private readonly DocumentNoService _docNoService;
 
     public CreateInventoryOpeningHandler(DbSession dbSession
-        , CurrentUser currentUser
+        , ICurrentUser currentUser
         , DocumentNoService docNoService)
     {
         _dbSession = dbSession;

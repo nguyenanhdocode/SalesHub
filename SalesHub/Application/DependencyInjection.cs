@@ -6,6 +6,7 @@ using Application.Behaviors;
 using Application.Services;
 using Application.Database;
 using Infrastructure.Security;
+using Application.Interfaces.Security;
 
 namespace Application;
 
@@ -18,7 +19,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssemblyContaining<CreateUserValidator>();
         services.AddSingleton<ArgonPasswordHasher>();
         services.AddSingleton<JwtProvider>(p => new JwtProvider(configuration));
-        services.AddScoped<CurrentUser>();
+        services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddHttpContextAccessor();
 
         services.AddMediatR(cfg =>

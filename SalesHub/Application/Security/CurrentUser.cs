@@ -1,9 +1,10 @@
 using System.Security.Claims;
+using Application.Interfaces.Security;
 using Microsoft.AspNetCore.Http;
 
 namespace Infrastructure.Security;
 
-public class CurrentUser
+public class CurrentUser : ICurrentUser
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     

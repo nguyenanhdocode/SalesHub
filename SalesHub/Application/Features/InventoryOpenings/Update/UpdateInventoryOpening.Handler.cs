@@ -1,5 +1,6 @@
 using Application.Database;
 using Application.Exceptions;
+using Application.Interfaces.Security;
 using Application.Services;
 using Application.Shared;
 using Dapper;
@@ -11,11 +12,11 @@ namespace Application.Features.InventoryOpenings.Update;
 public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpeningCommand>
 {
     private readonly DbSession _dbSession;
-    private readonly CurrentUser _currentUser;
+    private readonly ICurrentUser _currentUser;
     private readonly DocumentNoService _docNoService;
 
     public UpdateInventoryOpeningHandler(DbSession dbSession
-        , CurrentUser currentUser
+        , ICurrentUser currentUser
         , DocumentNoService docNoService)
     {
         _dbSession = dbSession;

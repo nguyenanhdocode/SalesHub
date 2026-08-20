@@ -1,5 +1,6 @@
 using Application.Database;
 using Application.Exceptions;
+using Application.Interfaces.Security;
 using Application.Services;
 using Dapper;
 using Infrastructure.Security;
@@ -10,11 +11,11 @@ namespace Application.Features.InventoryOpenings.CarryForward;
 public class CarryForwardHandler : IRequestHandler<CarryForwardCommand>
 {
     private readonly DbSession _dbSession;
-    private readonly CurrentUser _currentUser;
+    private readonly ICurrentUser _currentUser;
     private readonly DocumentNoService _docNoService;
 
     public CarryForwardHandler(DbSession dbSession
-        , CurrentUser currentUser
+        , ICurrentUser currentUser
         , DocumentNoService docNoService)
     {
         _dbSession = dbSession;
