@@ -56,7 +56,8 @@ public sealed class ExceptionMiddleware
                 response = new ErrorResponse
                 {
                     Code = ex.Message,
-                    Message = ex.Message
+                    Message = ex.Message,
+                    Errors = ex.Detail
                 };
                 break;
             case AuthenticateException ex:

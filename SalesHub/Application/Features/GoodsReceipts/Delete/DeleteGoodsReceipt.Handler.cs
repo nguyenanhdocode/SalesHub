@@ -46,16 +46,15 @@ public class DeleteGoodsReceiptHandler : IRequestHandler<DeleteGoodsReceiptComma
         FROM lines 
         WHERE ib.warehouse_id = lines.warehouse_id AND ib.product_id = lines.product_id
         AND ib.unit_id = lines.unit_id AND ib.quantity >= lines.actual_quantity
-        AND ib.amount >= lines.amount
-        RETURNING ib.warehouse_id, ib.product_id, ib.unit_id, ib.quantity
+        RETURNING ib.warehouse_id, ib.product_id, ib.unit_id
     )
     SELECT DISTINCT
         lines.product_id
     FROM lines
     LEFT JOIN updated ON updated.warehouse_id = lines.warehouse_id
         AND updated.product_id = lines.product_id
-        AND updated.uint_id = lines.unit_id
-    WHERE updated.product_id IS NULL OR COALESCE(updated.quantity, -1) < 0
+        AND updated.unit_id = lines.unit_id
+    WHERE updated.product_id IS NULL
     ";
 
     const string GET_STATUS_SQL = @"
