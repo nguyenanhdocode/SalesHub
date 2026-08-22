@@ -42,7 +42,16 @@ public class TransactionBehavior<TRequest, TResponse>
         try
         {
             var response = await next();
-            await transaction.CommitAsync(cancellationToken);
+
+            if (_configuration.GetValue<bool>("Testing:RollbackTransaction"))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            else
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
             return response;
 
         }
