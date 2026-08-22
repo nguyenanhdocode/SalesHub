@@ -92,7 +92,9 @@ public class ListSupplierHandler : IRequestHandler<ListSupplierQuery, PagedResul
             var counterQuery = new StringBuilder(COUNTER_QUERY);
             counterQuery.AppendLine(filterBuilder.ToString());
 
-            int totalRows = await _dbSession.Connection.ExecuteScalarAsync<int>(counterQuery.ToString(), parameters);
+            int totalRows = await _dbSession.Connection.ExecuteScalarAsync<int>(counterQuery.ToString()
+                , parameters
+                , _dbSession.Transaction);
             int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)request.PageSize));
 
             var dataQuery = new StringBuilder(FILTER_QUERY);
@@ -101,7 +103,9 @@ public class ListSupplierHandler : IRequestHandler<ListSupplierQuery, PagedResul
             parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
             parameters.Add("PageSize", request.PageSize);
 
-            var data = await _dbSession.Connection.QueryAsync<SupplierListItem>(dataQuery.ToString(), parameters);
+            var data = await _dbSession.Connection.QueryAsync<SupplierListItem>(dataQuery.ToString()
+                , parameters
+                , _dbSession.Transaction);
 
             return new PagedResult<SupplierListItem>(data, totalPages, request.PageNum, request.PageSize);
     }

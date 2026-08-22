@@ -35,7 +35,8 @@ public class GetSupplierHandler : IRequestHandler<GetSupplierQuery, GetSupplierR
         var row = await _dbSession.Connection.QuerySingleOrDefaultAsync<GetSupplierResponse>(GET_QUERY, new
         {
             SupplierId = request.SupplierId
-        });
+        }
+        , _dbSession.Transaction);
 
         if (row == null)
         {

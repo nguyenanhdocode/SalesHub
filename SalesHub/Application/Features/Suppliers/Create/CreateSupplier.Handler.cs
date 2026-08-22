@@ -29,7 +29,7 @@ public class CreateSupplierHandler : IRequestHandler<CreateSupplierCommand, int>
 
     public async Task<int> Handle(CreateSupplierCommand request, CancellationToken cancellationToken)
     {
-        int id = await _dbSession.Connection.ExecuteScalarAsync<int>(INSERT_QUERY, request);
+        int id = await _dbSession.Connection.ExecuteScalarAsync<int>(INSERT_QUERY, request, _dbSession.Transaction);
         return id;
     }
 }

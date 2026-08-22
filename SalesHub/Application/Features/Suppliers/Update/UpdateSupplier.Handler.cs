@@ -29,7 +29,7 @@ public class UpdateSupplierHandler : IRequestHandler<UpdateSupplierCommand, int>
 
     public async Task<int> Handle(UpdateSupplierCommand request, CancellationToken cancellationToken)
     {
-        int id = await _dbSession.Connection.ExecuteScalarAsync<int>(UPDATE_QUERY, request);
+        int id = await _dbSession.Connection.ExecuteScalarAsync<int>(UPDATE_QUERY, request, _dbSession.Transaction);
 
         return id;
     }

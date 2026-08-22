@@ -21,6 +21,7 @@ public class DeleteSupplierHandler : IRequestHandler<DeleteSupplierCommand>
         await _dbSession.Connection.ExecuteAsync(DELETE_QUERY, new
         {
             SupplierId = request.SupplierId
-        });
+        }
+        , _dbSession.Transaction);
     }
 }
