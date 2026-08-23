@@ -68,4 +68,91 @@ public class DeleteSupplierTests : IClassFixture<ApplicationFixture>
 
         Assert.Equal("notfound", ex.Code);
     }
+
+    [Fact]
+    public async Task Delete_Should_Throw_Fk_Violation()
+    {
+        using var scope = _fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var supplierCode = Guid.NewGuid().ToString("N")[..25];
+        var productCode = Guid.NewGuid().ToString("N")[..25];
+        var unitCode = Guid.NewGuid().ToString("N")[..25];
+
+        try
+        {
+            int insertedUnitId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
+            INSERT INTO units (code, name)
+            VALUES (@Code, @Name)
+            RETURNING unit_id;
+            ", new
+            {
+                Code = unitCode,
+                Name = unitCode
+            });
+
+            var command = new CreateSupplierCommand
+            {
+                Code = supplierCode.ToString(),
+                Name = supplierCode.ToString(),
+                ContactPerson = supplierCode.ToString(),
+                Phone = "0123456789",
+                TaxCode = "9876543210",
+                Email = $"{supplierCode}@gmail.com",
+                Address = supplierCode.ToString(),
+            };
+
+            int insertedSupplierId = await sender.Send(command, CancellationToken.None);
+            
+            var insertedProductId = await dbSession.Connection.ExecuteScalarAsync<int>(
+                @$"
+                INSERT INTO public.products(
+                    internal_code
+                    , external_code
+                    , name
+                    , costing_method
+                    , base_unit_id
+                    , supplier_id)
+                VALUES (
+                    @InternalCode
+                    , @ExternalCode
+                    , @Name
+                    , 'AVG'
+                    , @BaseUnitId
+                    , @SupplierId)
+                RETURNING product_id;
+                ", new
+                {
+                    InternalCode = productCode,
+                    ExternalCode = productCode,
+                    Name = productCode,
+                    BaseUnitId = insertedUnitId,
+                    SupplierId = insertedSupplierId
+                });
+
+            var ex = await Assert.ThrowsAsync<PostgresException>(async () =>
+            {
+                await sender.Send(new DeleteSupplierCommand { SupplierId =  insertedSupplierId});
+            });
+
+            Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, ex.SqlState);
+        }
+        finally
+        {
+            await dbSession.Connection.ExecuteAsync(@"DELETE FROM products WHERE internal_code = @Code", new
+            {
+                Code = productCode
+            });
+
+            await dbSession.Connection.ExecuteAsync(@"DELETE FROM suppliers WHERE code = @Code", new
+            {
+                Code = supplierCode
+            });
+
+            await dbSession.Connection.ExecuteAsync(@"DELETE FROM units WHERE code = @Code", new
+            {
+                Code = unitCode
+            });
+        }
+    }
 }

@@ -213,20 +213,20 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 
         Assert.Equal(1, res1.PageNumer);
         Assert.Equal(50, res1.PageSize);
-        Assert.Equal(5, res1.Rows.Count());
+        Assert.Equal(5, res1.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
 
         var res2 = await sender.Send(new ListUnitQuery { PageNum = 1, PageSize = 0}
         , CancellationToken.None);
 
         Assert.Equal(1, res2.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res2.PageSize);
-        Assert.Equal(5, res2.Rows.Count());
+        Assert.Equal(5, res2.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
 
         var res3 = await sender.Send(new ListUnitQuery { PageNum = 0, PageSize = 0}
         , CancellationToken.None);
 
         Assert.Equal(1, res3.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res3.PageSize);
-        Assert.Equal(5, res3.Rows.Count());
+        Assert.Equal(5, res3.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
     }
 }
