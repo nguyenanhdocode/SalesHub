@@ -9,7 +9,6 @@ namespace Application.Features.Suppliers.List;
 
 public class ListSupplierQuery : IRequest<PagedResult<SupplierListItem>>, IPaginable, ITransactionalRequest
 {
-    public int? SupplierId {get;set;}
     public string? Code {get;set;}
     public string? Name {get;set;}
     public string? ContactPerson {get;set;}

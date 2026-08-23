@@ -1,4 +1,5 @@
 using Application.Database;
+using Application.Exceptions;
 using Dapper;
 using MediatR;
 
@@ -14,14 +15,20 @@ public class DeleteSupplierHandler : IRequestHandler<DeleteSupplierCommand>
 
     private const string DELETE_QUERY = @"
     DELETE FROM public.suppliers WHERE supplier_id = @SupplierId
+    RETURNING supplier_id;
     ";
 
     public async Task Handle(DeleteSupplierCommand request, CancellationToken cancellationToken)
     {
-        await _dbSession.Connection.ExecuteAsync(DELETE_QUERY, new
+        int id = await _dbSession.Connection.ExecuteScalarAsync<int>(DELETE_QUERY, new
         {
             SupplierId = request.SupplierId
         }
         , _dbSession.Transaction);
+
+        if (id <= 0)
+        {
+            throw new BusinessException("notfound");
+        }
     }
 }

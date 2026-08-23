@@ -41,12 +41,6 @@ public class ListSupplierHandler : IRequestHandler<ListSupplierQuery, PagedResul
 
             var parameters = new DynamicParameters();
 
-            if (request.SupplierId != null)
-            {
-                filterBuilder.AppendLine("AND supplier_id = @SupplierId");
-                parameters.Add("SupplierId", request.SupplierId);
-            }
-
             if (!string.IsNullOrEmpty(request.Code))
             {
                 filterBuilder.AppendLine("AND code ILIKE @Code");
