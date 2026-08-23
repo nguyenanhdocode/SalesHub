@@ -3,6 +3,7 @@ using Application.Exceptions;
 using Application.Features.Suppliers.Create;
 using Application.Features.Suppliers.Delete;
 using Application.Features.Suppliers.List;
+using Application.Shared;
 using Dapper;
 using FluentValidation;
 using MediatR;
@@ -150,8 +151,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Code = "LIST-TEST-SUP001"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 1);
-        Assert.Equal("LIST-TEST-SUP001", res.Rows.First().Code);
+        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP001");
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Code = "LIST-TEST-SUP"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 6);
+        Assert.Equal(6, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Code = "LIST-TEST-SUP-SOMETHING"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 0);
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
     }
 
     [Fact]
@@ -193,8 +193,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Name = "DEF Medical"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 1);
-        Assert.Equal("LIST-TEST-SUP006", res.Rows.First().Code);
+        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
     }
 
     [Fact]
@@ -208,7 +207,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Name = "Pharma"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 4);
+        Assert.Equal(4, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
     }
 
     [Fact]
@@ -222,7 +221,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Name = "GHI Pharma"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 0);
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
     }
 
     [Fact]
@@ -236,8 +235,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             ContactPerson = "Trần Văn B"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 1);
-        Assert.Equal("LIST-TEST-SUP006", res.Rows.First().Code);
+        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
     }
 
     [Fact]
@@ -251,7 +249,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             ContactPerson = "Trần Văn"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 2);
+        Assert.Equal(2, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
     }
 
     [Fact]
@@ -265,7 +263,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             ContactPerson = "Trần Văn F"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 0);
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
     }
 
     [Fact]
@@ -279,8 +277,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             TaxCode = "TAX006"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 1);
-        Assert.Equal("LIST-TEST-SUP006", res.Rows.First().Code);
+        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
     }
 
     [Fact]
@@ -294,7 +291,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             TaxCode = "TAX"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 6);
+        Assert.Equal(6, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());;
     }
 
     [Fact]
@@ -308,7 +305,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             TaxCode = "TAX9999"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 0);
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
     }
 
     [Fact]
@@ -322,8 +319,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Email = "abc@test.com"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 1);
-        Assert.Equal("LIST-TEST-SUP001", res.Rows.First().Code);
+        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP001");
     }
 
     [Fact]
@@ -337,7 +333,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Email = "abc"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 3);
+        Assert.Equal(3, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
     }
 
     [Fact]
@@ -351,7 +347,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Email = "abcpharma@gmail.com"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 0);
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
     }
 
     [Fact]
@@ -365,8 +361,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Address = "Huế"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 1);
-        Assert.Equal("LIST-TEST-SUP006", res.Rows.First().Code);
+        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
     }
 
     [Fact]
@@ -380,7 +375,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Address = "HCM"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 2);
+        Assert.Equal(2, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
     }
 
     [Fact]
@@ -394,7 +389,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Email = "Tây Ninh"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 0);
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
     }
     #endregion
 
@@ -416,8 +411,54 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             TaxCode = "TAX006"
         }, CancellationToken.None);
 
-        Assert.True(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count() == 1);
-        Assert.Equal("LIST-TEST-SUP006", res.Rows.First().Code);
+        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
+    }
+
+    [Fact]
+    public async Task Paginate_Should_Success()
+    {
+        using var scope = _fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+
+        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 3}
+        , CancellationToken.None);
+
+        Assert.Equal(3, res1.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+
+        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 2, PageSize = 3}
+        , CancellationToken.None);
+
+        Assert.Equal(3, res2.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+    }
+
+    [Fact]
+    public async Task Paginate_With_Wrong_Number_Should_Success()
+    {
+        using var scope = _fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+
+        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 0, PageSize = 50}
+        , CancellationToken.None);
+
+        Assert.Equal(1, res1.PageNumer);
+        Assert.Equal(50, res1.PageSize);
+        Assert.Equal(6, res1.Rows.Count());
+
+        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 0}
+        , CancellationToken.None);
+
+        Assert.Equal(1, res2.PageNumer);
+        Assert.Equal(Constants.PAGE_SIZE, res2.PageSize);
+        Assert.Equal(6, res2.Rows.Count());
+
+        var res3 = await sender.Send(new ListSupplierQuery { PageNum = 0, PageSize = 0}
+        , CancellationToken.None);
+
+        Assert.Equal(1, res3.PageNumer);
+        Assert.Equal(Constants.PAGE_SIZE, res3.PageSize);
+        Assert.Equal(6, res3.Rows.Count());
     }
     #endregion
 }
