@@ -1,6 +1,8 @@
+using System.Data.Entity.ModelConfiguration.Conventions;
 using System.Text;
 using Application.Database;
 using Application.Models.Common;
+using Application.Shared;
 using Dapper;
 using MediatR;
 
@@ -89,18 +91,23 @@ public class ListSupplierHandler : IRequestHandler<ListSupplierQuery, PagedResul
             int totalRows = await _dbSession.Connection.ExecuteScalarAsync<int>(counterQuery.ToString()
                 , parameters
                 , _dbSession.Transaction);
-            int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)request.PageSize));
+
+            int pageSize = request.PageSize > 0 ? request.PageSize : Constants.PAGE_SIZE;
+
+            int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)pageSize));
+            
+            int pageNum = (request.PageNum > 0 && request.PageNum <= totalPages) ? request.PageNum : 1;
 
             var dataQuery = new StringBuilder(FILTER_QUERY);
             dataQuery.AppendLine(filterBuilder.ToString());
             dataQuery.AppendLine("ORDER BY Code OFFSET @Offset LIMIT @PageSize");
-            parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
-            parameters.Add("PageSize", request.PageSize);
+            parameters.Add("Offset", (pageNum - 1) * pageSize);
+            parameters.Add("PageSize", pageSize);
 
             var data = await _dbSession.Connection.QueryAsync<SupplierListItem>(dataQuery.ToString()
                 , parameters
                 , _dbSession.Transaction);
 
-            return new PagedResult<SupplierListItem>(data, totalPages, request.PageNum, request.PageSize);
+            return new PagedResult<SupplierListItem>(data, totalPages, pageNum, pageSize);
     }
 }

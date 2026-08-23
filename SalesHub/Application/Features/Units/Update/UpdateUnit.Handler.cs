@@ -23,7 +23,11 @@ public class UpdateUnitHandler : IRequestHandler<UpdateUnitCommand>
     ";
 
     private const string UPDATE_QUERY = @"
-    UPDATE units SET code = @Code, name = @Name, updated_at = CURRENT_TIMESTAMP
+    UPDATE units SET 
+        code = @Code
+        , name = @Name
+        , active = @Active
+        , updated_at = CURRENT_TIMESTAMP
     WHERE unit_id = @UnitId
     ";
 

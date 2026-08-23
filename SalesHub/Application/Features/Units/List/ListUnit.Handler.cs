@@ -1,6 +1,7 @@
 using System.Text;
 using Application.Database;
 using Application.Models.Common;
+using Application.Shared;
 using Dapper;
 using FluentValidation;
 using MediatR;
@@ -56,16 +57,20 @@ public class ListUnitHandler : IRequestHandler<ListUnitQuery, PagedResult<UnitLi
         countQueryBuilder.AppendLine(filterQueryBuilder.ToString());
 
         int totalRows = await _dbSession.Connection.ExecuteScalarAsync<int>(countQueryBuilder.ToString(), parameters);
-        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)request.PageSize));
+        int pageSize = request.PageSize > 0 ? request.PageSize : Constants.PAGE_SIZE;
+
+        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)pageSize));
+        
+        int pageNum = (request.PageNum > 0 && request.PageNum <= totalPages) ? request.PageNum : 1;
 
         var dataQueryBuilder = new StringBuilder(BASE_QUERY);
         dataQueryBuilder.AppendLine(filterQueryBuilder.ToString());
         dataQueryBuilder.AppendLine("ORDER BY code OFFSET @Offset LIMIT @PageSize");
-        parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
-        parameters.Add("PageSize", request.PageSize);
+        parameters.Add("Offset", (pageNum - 1) * pageSize);
+        parameters.Add("PageSize", pageSize);
 
         var data = await _dbSession.Connection.QueryAsync<UnitListItem>(dataQueryBuilder.ToString(), parameters);
 
-        return new PagedResult<UnitListItem>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<UnitListItem>(data, totalPages, pageNum, pageSize);
     }
 }

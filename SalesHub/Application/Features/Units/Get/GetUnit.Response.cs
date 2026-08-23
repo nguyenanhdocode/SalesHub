@@ -2,7 +2,6 @@ namespace Application.Features.Units.Get;
 
 public class GetUnitResponse
 {
-    public int RowNumber { get; set; }
     public int UnitId { get; set; }
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
