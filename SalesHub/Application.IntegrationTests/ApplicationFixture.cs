@@ -22,6 +22,7 @@ public class ApplicationFixture : IAsyncLifetime
         services.AddLogging();
         services.AddSingleton(Configuration);
         services.AddApplication(Configuration);
+        services.AddScoped<DbSession>(_ => new DbSession(Configuration));
 
         Services = services.BuildServiceProvider();
 
