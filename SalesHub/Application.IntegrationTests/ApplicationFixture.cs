@@ -1,3 +1,4 @@
+using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -23,12 +24,11 @@ public class ApplicationFixture : IAsyncLifetime
         services.AddSingleton(Configuration);
         services.AddApplication(Configuration);
         services.AddScoped<DbSession>(_ => new DbSession(Configuration));
+        services.AddScoped<DataRandom>();
 
         Services = services.BuildServiceProvider();
-
-        await Task.CompletedTask;
     }
-    
+
     public async Task DisposeAsync()
     {
         if (Services is IDisposable disposable)

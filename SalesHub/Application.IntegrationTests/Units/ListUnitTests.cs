@@ -18,6 +18,8 @@ namespace Application.IntegrationTests.Units;
 public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly List<int> _unitIds = [];
+    private string _prefix = Guid.NewGuid().ToString("N")[..25];
 
     public ListUnitTests(ApplicationFixture fixture)
     {
@@ -27,9 +29,12 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     public async Task DisposeAsync()
     {
         using var scope = _fixture.CreateScope();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
 
-        await dbSession.Connection.ExecuteAsync(@"DELETE FROM units WHERE code ILIKE 'LIST-TEST-%'");
+        foreach (var unitId in _unitIds)
+        {
+            await dataRand.DeleteUnit(unitId);
+        }
     }
 
     public async Task InitializeAsync()
@@ -40,45 +45,51 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 
         var command1 = new CreateUnitCommand
         {
-            Code = "LIST-TEST-kg",
+            Code = $"{_prefix}-kg",
             Name = "Kilogram"
         };
 
         var command2 = new CreateUnitCommand
         {
-            Code = "LIST-TEST-gr",
+            Code = $"{_prefix}-gr",
             Name = "Gram"
         };
 
         var command3 = new CreateUnitCommand
         {
-            Code = "LIST-TEST-pcs",
+            Code = $"{_prefix}-pcs",
             Name = "Pcs (cái)"
         };
 
         var command4 = new CreateUnitCommand
         {
-            Code = "LIST-TEST-litter",
+            Code = $"{_prefix}-litter",
             Name = "Litter (lít)"
         };
 
         var command5 = new CreateUnitCommand
         {
-            Code = "LIST-TEST-m",
+            Code = $"{_prefix}-m",
             Name = "Metter (mét)"
         };
 
-        var res1 = await sender.Send(command1, CancellationToken.None);
-        var res2 = await sender.Send(command2, CancellationToken.None);
-        var res3 = await sender.Send(command3, CancellationToken.None);
-        var res4 = await sender.Send(command4, CancellationToken.None);
-        var res5 = await sender.Send(command5, CancellationToken.None);
+        var unitId1 = await sender.Send(command1, CancellationToken.None);
+        var unitId2 = await sender.Send(command2, CancellationToken.None);
+        var unitId3 = await sender.Send(command3, CancellationToken.None);
+        var unitId4 = await sender.Send(command4, CancellationToken.None);
+        var unitId5 = await sender.Send(command5, CancellationToken.None);
 
-        Assert.True(res1 > 0);
-        Assert.True(res2 > 0);
-        Assert.True(res3 > 0);
-        Assert.True(res4 > 0);
-        Assert.True(res5 > 0);
+        Assert.True(unitId1 > 0);
+        Assert.True(unitId2 > 0);
+        Assert.True(unitId3 > 0);
+        Assert.True(unitId4 > 0);
+        Assert.True(unitId5 > 0);
+
+        _unitIds.Add(unitId1);
+        _unitIds.Add(unitId2);
+        _unitIds.Add(unitId3);
+        _unitIds.Add(unitId4);
+        _unitIds.Add(unitId5);
     }
 
     [Fact]
@@ -89,8 +100,9 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery {}, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(5, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(_unitIds.Count, count);
     }
 
     [Fact]
@@ -100,9 +112,9 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListUnitQuery { Code = "LIST-TEST-kg" }, CancellationToken.None);
+        var res = await sender.Send(new ListUnitQuery { Code = $"{_prefix}-kg" }, CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-kg");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}-kg");
     }
 
     [Fact]
@@ -112,9 +124,10 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListUnitQuery { Code = "LIST-TEST" }, CancellationToken.None);
+        var res = await sender.Send(new ListUnitQuery { Code = _prefix }, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(5, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(5, count);
     }
 
     [Fact]
@@ -124,9 +137,9 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListUnitQuery { Code = "LIST-TEST-SOMETHING" }, CancellationToken.None);
+        var res = await sender.Send(new ListUnitQuery { Code = $"{_prefix}-something" }, CancellationToken.None);
 
-        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith(_prefix)).ToList());
     }
 
     [Fact]
@@ -138,7 +151,7 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 
         var res = await sender.Send(new ListUnitQuery { Name = "Kilogram" }, CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-kg");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}-kg");
     }
 
     [Fact]
@@ -149,8 +162,9 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Name = "gram" }, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(2, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(2, count);
     }
 
     [Fact]
@@ -160,22 +174,22 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListUnitQuery { Name = "gramabc" }, CancellationToken.None);
+        var res = await sender.Send(new ListUnitQuery { Name = $"{_prefix}-gramabc" }, CancellationToken.None);
 
-        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith(_prefix)).ToList());
     }
 
     [Fact]
-    public async Task Should_Filter_By_All()
+    public async Task Should_Filter_By_All_Fields()
     {
         using var scope = _fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListUnitQuery { Code = "kg", Name = "Kilogram" }
+        var res = await sender.Send(new ListUnitQuery { Code = $"{_prefix}-kg", Name = "Kilogram" }
         , CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-kg");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}-kg");
     }
 
     [Fact]
@@ -185,20 +199,22 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListUnitQuery { PageNum = 1, PageSize = 2}
+        var res1 = await sender.Send(new ListUnitQuery { PageNum = 1, PageSize = 2, Code = _prefix}
+        , CancellationToken.None);
+        int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+
+        Assert.Equal(2, count1);
+
+        var res2 = await sender.Send(new ListUnitQuery { PageNum = 2, PageSize = 2, Code = _prefix}
+        , CancellationToken.None);
+        int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+
+        Assert.Equal(2, count2);
+
+        var res3 = await sender.Send(new ListUnitQuery { PageNum = 3, PageSize = 2, Code = _prefix}
         , CancellationToken.None);
 
-        Assert.Equal(2, res1.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
-
-        var res2 = await sender.Send(new ListUnitQuery { PageNum = 2, PageSize = 2}
-        , CancellationToken.None);
-
-        Assert.Equal(2, res2.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
-
-        var res3 = await sender.Send(new ListUnitQuery { PageNum = 3, PageSize = 2}
-        , CancellationToken.None);
-
-        Assert.Single(res3.Rows, p => p.Code.StartsWith("LIST-TEST-"));
+        Assert.Single(res3.Rows, p => p.Code.StartsWith(_prefix));
     }
 
     [Fact]
@@ -208,25 +224,28 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListUnitQuery { PageNum = 0, PageSize = 50}
+        var res1 = await sender.Send(new ListUnitQuery { PageNum = 0, PageSize = 50, Code = _prefix}
         , CancellationToken.None);
+        int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(1, res1.PageNumer);
         Assert.Equal(50, res1.PageSize);
-        Assert.Equal(5, res1.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(5, count1);
 
-        var res2 = await sender.Send(new ListUnitQuery { PageNum = 1, PageSize = 0}
+        var res2 = await sender.Send(new ListUnitQuery { PageNum = 1, PageSize = 0, Code = _prefix}
         , CancellationToken.None);
+        int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(1, res2.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res2.PageSize);
-        Assert.Equal(5, res2.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(5, count2);
 
-        var res3 = await sender.Send(new ListUnitQuery { PageNum = 0, PageSize = 0}
+        var res3 = await sender.Send(new ListUnitQuery { PageNum = 0, PageSize = 0, Code = _prefix}
         , CancellationToken.None);
+        int count3 = res3.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(1, res3.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res3.PageSize);
-        Assert.Equal(5, res3.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(5, count3);
     }
 }

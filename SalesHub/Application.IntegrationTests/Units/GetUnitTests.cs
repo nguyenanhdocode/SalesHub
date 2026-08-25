@@ -28,71 +28,74 @@ public class GetUnitTests : IClassFixture<ApplicationFixture>
         using var scope = _fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        int unitId = 0;
+        string code = Guid.NewGuid().ToString("N")[..25];
 
         var command = new CreateUnitCommand
         {
             Code = code,
-            Name = $"Đơn vị tính {code}"
+            Name = $"{code}name"
         };
 
         try
         {
-            var insertedId = await sender.Send(command, CancellationToken.None);
-            Assert.True(insertedId > 0);
+            unitId = await sender.Send(command, CancellationToken.None);
+            Assert.NotEqual(0, unitId);
 
-            var res = await sender.Send(new GetUnitQuery
+            var getCommand = new GetUnitQuery
             {
-                UnitId = insertedId
-            }, CancellationToken.None);
+              UnitId = unitId  
+            };
 
-            Assert.Equal(code, res.Code);
+            var res = await sender.Send(getCommand, CancellationToken.None);
+            Assert.Equal(command.Code, res.Code);
             Assert.Equal(command.Name, res.Name);
+            Assert.Equal(unitId, res.UnitId);
+            Assert.True(res.Active);
         }
         finally
         {
-            await dbSession.Connection.ExecuteAsync(@"DELETE FROM units WHERE code = @Code", new
-            {
-                Code = code
-            });
+            await dataRand.DeleteUnit(unitId);
         }
     }
 
     [Fact]
-    public async Task Get_Should_Throw_NotFound()
+    public async Task Get_Should_NotFound()
     {
         using var scope = _fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        int unitId = 0;
+        string code = Guid.NewGuid().ToString("N")[..25];
 
         var command = new CreateUnitCommand
         {
             Code = code,
-            Name = $"Đơn vị tính {code}"
+            Name = $"{code}name"
         };
 
         try
         {
-            var insertedId = await sender.Send(command, CancellationToken.None);
-            Assert.True(insertedId > 0);
+            unitId = await sender.Send(command, CancellationToken.None);
+            Assert.NotEqual(0, unitId);
+
+            var getCommand = new GetUnitQuery
+            {
+              UnitId = int.MaxValue  
+            };
 
             var ex = await Assert.ThrowsAsync<BusinessException>(async () =>
             {
-                await sender.Send(new GetUnitQuery
-                {
-                    UnitId = int.MaxValue
-                }, CancellationToken.None);
+               await sender.Send(getCommand, CancellationToken.None);
             });
 
             Assert.Equal("notfound", ex.Code);
         }
         finally
         {
-            await dbSession.Connection.ExecuteAsync(@"DELETE FROM units WHERE code = @Code", new
-            {
-                Code = code
-            });
+            await dataRand.DeleteUnit(unitId);
         }
     }
 }

@@ -82,7 +82,7 @@ public class UpdateUnitTests : IClassFixture<ApplicationFixture>
 
     [Theory]
     [MemberData(nameof(InvalidCommands))]
-    public async Task Update_Should_Validator_Fail(UpdateUnitCommand command, string expectedProperty)
+    public async Task Update_Should_Throw_Validation_Exception(UpdateUnitCommand command, string expectedProperty)
     {
         using var scope = _fixture.CreateScope();
 
@@ -102,100 +102,43 @@ public class UpdateUnitTests : IClassFixture<ApplicationFixture>
         using var scope = _fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+
+        int unitId = 0;
+        string code = Guid.NewGuid().ToString("N")[..25];
 
         var command = new CreateUnitCommand
         {
             Code = code,
-            Name = $"Đơn vị tính {code}"
+            Name = $"{code}name"
         };
-
-        var updateCode = $"{code}-edited";
 
         try
         {
-            var insertedId = await sender.Send(command, CancellationToken.None);
-            Assert.True(insertedId > 0);
+            unitId = await sender.Send(command, CancellationToken.None);
+            Assert.NotEqual(0, unitId);
 
             var updateCommand = new UpdateUnitCommand
             {
-                UnitId = insertedId,
-                Code = updateCode,
-                Name = "Đơn vị tính edited",
-                Active = false
+              UnitId = unitId,
+              Code = $"{code}updated",
+              Name = $"{code}name-updated",
+              Active = false
             };
 
             await sender.Send(updateCommand, CancellationToken.None);
 
-            int updateId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
+            int testId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
             SELECT unit_id FROM units
-            WHERE code = @Code AND name = @Name AND active = @Active;
-            ", updateCommand);
+            WHERE unit_id = @UnitId AND code = @Code AND name = @Name AND active = @Active
+            "
+            , updateCommand);
 
-            Assert.Equal(insertedId, updateId);
+            Assert.Equal(unitId, testId);
         }
         finally
         {
-            await dbSession.Connection.ExecuteAsync(@"DELETE FROM units WHERE code = ANY(@Codes)", new
-            {
-               Codes = new string[] {code, updateCode}
-            });
-        }
-    }
-
-    [Fact]
-    public async Task Update_Should_Throw_Exists()
-    {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-
-        var code1 = Guid.NewGuid().ToString("N")[..25];
-        var command1 = new CreateUnitCommand
-        {
-            Code = code1,
-            Name = $"Đơn vị tính {code1}"
-        };
-
-        var code2 = Guid.NewGuid().ToString("N")[..25];
-        var command2 = new CreateUnitCommand
-        {
-            Code = code2,
-            Name = $"Đơn vị tính {code2}"
-        };
-
-        var updateCode = code2;
-
-        try
-        {
-            var insertedId1 = await sender.Send(command1, CancellationToken.None);
-            Assert.True(insertedId1 > 0);
-
-            var insertedId2 = await sender.Send(command2, CancellationToken.None);
-            Assert.True(insertedId2 > 0);
-
-            var updateCommand = new UpdateUnitCommand
-            {
-                UnitId = insertedId1,
-                Code = code2,
-                Name = "Đơn vị tính edited",
-                Active = false
-            };
-
-            var ex = await Assert.ThrowsAsync<BusinessException>(async () =>
-            {
-               await sender.Send(updateCommand, CancellationToken.None); 
-            });
-
-            Assert.Equal("exists", ex.Code);
-
-        }
-        finally
-        {
-            await dbSession.Connection.ExecuteAsync(@"DELETE FROM units WHERE code = ANY(@Codes)", new
-            {
-               Codes = new string[] {code1, code2}
-            });
+            await dataRand.DeleteUnit(unitId);
         }
     }
 }

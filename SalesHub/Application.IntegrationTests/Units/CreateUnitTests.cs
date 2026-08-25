@@ -1,15 +1,12 @@
-using System.Media;
-using Application.Exceptions;
-using Application.Features.Suppliers.Create;
 using Application.Features.Units.Create;
+using Application.IntegrationTests;
 using Dapper;
 using FluentValidation;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
-namespace Application.IntegrationTests.Units;
+namespace Application.Interfaces.Units;
 
 public class CreateUnitTests : IClassFixture<ApplicationFixture>
 {
@@ -85,7 +82,6 @@ public class CreateUnitTests : IClassFixture<ApplicationFixture>
     public async Task Create_Should_Validator_Fail(CreateUnitCommand command, string expectedProperty)
     {
         using var scope = _fixture.CreateScope();
-
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
         var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
@@ -102,67 +98,65 @@ public class CreateUnitTests : IClassFixture<ApplicationFixture>
         using var scope = _fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        string code = Guid.NewGuid().ToString("N")[..25];
+        int insertedId = 0;
 
         var command = new CreateUnitCommand
         {
             Code = code,
-            Name = $"Đơn vị tính {code}"
+            Name = code
         };
 
         try
         {
-            var res = await sender.Send(command, CancellationToken.None);
-            Assert.True(res > 0);
+            insertedId = await sender.Send(command, CancellationToken.None);
+            Assert.NotEqual(0, insertedId);
 
-            int id = await dbSession.Connection.ExecuteScalarAsync<int>(@"
+            int testId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
             SELECT unit_id FROM units
             WHERE code = @Code AND name = @Name AND active = true;
             ", command);
 
-            Assert.Equal(id, res);
+            Assert.Equal(insertedId, testId);
         }
         finally
         {
-            await dbSession.Connection.ExecuteAsync(@"DELETE FROM units WHERE code = @Code", new
-            {
-               Code = code
-            });
+            await dataRand.DeleteUnit(insertedId);
         }
     }
 
     [Fact]
-    public async Task Create_Should_Throw_Exists()
+    public async Task Create_Should_Throw_Unique_Violation()
     {
         using var scope = _fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        string code = Guid.NewGuid().ToString("N")[..25];
+        int insertedId = 0;
 
         var command = new CreateUnitCommand
         {
             Code = code,
-            Name = $"Đơn vị tính {code}"
+            Name = code
         };
 
         try
         {
-            var res = await sender.Send(command, CancellationToken.None);
-            Assert.True(res > 0);
+            insertedId = await sender.Send(command, CancellationToken.None);
+            Assert.NotEqual(0, insertedId);
 
-            var ex = await Assert.ThrowsAsync<BusinessException>(async () =>
+            var ex = await Assert.ThrowsAsync<PostgresException>(async () =>
             {
-               await sender.Send(command, CancellationToken.None);  
+                await sender.Send(command, CancellationToken.None);
             });
 
-            Assert.Equal("exists", ex.Code);
+            Assert.Equal(PostgresErrorCodes.UniqueViolation, ex.SqlState);
         }
         finally
         {
-            await dbSession.Connection.ExecuteAsync(@"DELETE FROM units WHERE code = @Code", new
-            {
-               Code = code
-            });
+            await dataRand.DeleteUnit(insertedId);
         }
     }
 }
