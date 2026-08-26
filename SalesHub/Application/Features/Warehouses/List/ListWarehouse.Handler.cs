@@ -1,6 +1,7 @@
 using System.Text;
 using Application.Database;
 using Application.Models.Common;
+using Application.Shared;
 using Dapper;
 using MediatR;
 
@@ -47,36 +48,38 @@ public class ListWarehouseHandler : IRequestHandler<ListWarehouseQuery, PagedRes
 
         if (!string.IsNullOrEmpty(request.Code))
         {
-            filterQueryBuilder.AppendLine(" AND code ILIKE @Code");
+            filterQueryBuilder.AppendLine(" AND warehouses.code ILIKE @Code");
             parameters.Add("Code", $"%{request.Code}%");
         }
 
         if (!string.IsNullOrEmpty(request.Name))
         {
-            filterQueryBuilder.AppendLine(" AND name ILIKE @Name");
+            filterQueryBuilder.AppendLine(" AND warehouses.name ILIKE @Name");
             parameters.Add("Name", $"%{request.Name}%");
         }
 
         if (request.Active != null)
         {
-            filterQueryBuilder.AppendLine(" AND active = @Active");
-            parameters.Add("Active", $"%{request.Active}%");
+            filterQueryBuilder.AppendLine(" AND warehouses.active = @Active");
+            parameters.Add("Active", request.Active);
         }
 
         var counterQueryBuilder = new StringBuilder(COUNTER_SQL);
         counterQueryBuilder.AppendLine(filterQueryBuilder.ToString());
 
         int totalRows = await _dbSession.Connection.ExecuteScalarAsync<int>(counterQueryBuilder.ToString(), parameters);
-        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)request.PageSize));
+        int pageSize = request.PageSize > 0 ? request.PageSize : Constants.PAGE_SIZE;
+        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)pageSize));
+        int pageNum = (request.PageNum > 0 && request.PageNum <= totalPages) ? request.PageNum : 1;
 
         var listQueryBuilder = new StringBuilder(LIST_SQL);
         listQueryBuilder.AppendLine(filterQueryBuilder.ToString());
-        listQueryBuilder.AppendLine("ORDER BY Code OFFSET @Offset LIMIT @PageSize");
-        parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
-        parameters.Add("PageSize", request.PageSize);
+        listQueryBuilder.AppendLine("ORDER BY warehouses.code OFFSET @Offset LIMIT @PageSize");
+        parameters.Add("Offset", (pageNum - 1) * pageSize);
+        parameters.Add("PageSize", pageSize);
 
         var data = await _dbSession.Connection.QueryAsync<WarehouseListItem>(listQueryBuilder.ToString(), parameters);
 
-        return new PagedResult<WarehouseListItem>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<WarehouseListItem>(data, totalPages, pageNum, pageSize);
     }
 }

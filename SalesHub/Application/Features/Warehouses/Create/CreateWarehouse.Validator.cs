@@ -18,6 +18,7 @@ public class CreateWarehouseValidator : AbstractValidator<CreateWarehouseCommand
             .MaximumLength(250);
 
         RuleFor(p => p.BranchId)
-            .NotNull();
+            .NotNull()
+            .GreaterThan(0);
     }
 }

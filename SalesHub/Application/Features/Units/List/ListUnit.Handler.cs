@@ -53,6 +53,12 @@ public class ListUnitHandler : IRequestHandler<ListUnitQuery, PagedResult<UnitLi
             parameters.Add("Name", $"%{request.Name}%");
         }
 
+        if (request.Active != null)
+        {
+            filterQueryBuilder.AppendLine(@" AND active = @Active");
+            parameters.Add("Active", request.Active);
+        }
+
         var countQueryBuilder = new StringBuilder(COUNT_QUERY);
         countQueryBuilder.AppendLine(filterQueryBuilder.ToString());
 

@@ -20,17 +20,8 @@ public class CreateUnitHandler : IRequestHandler<CreateUnitCommand, int>
     RETURNING unit_id;
     ";
 
-    private const string CHECK_EXISTS_QUERY = @"SELECT EXISTS(SELECT 1 FROM units WHERE code = @Code)";
-
     public async Task<int> Handle(CreateUnitCommand request, CancellationToken cancellationToken)
     {
-        bool exists = await _dbSession.Connection.QuerySingleAsync<bool>(CHECK_EXISTS_QUERY, new { request.Code });
-
-        if (exists)
-        {
-            throw new BusinessException("exists");
-        }
-
         int id = await _dbSession.Connection.ExecuteScalarAsync<int>(INSERT_QUERY, new
         {
             Code = request.Code,

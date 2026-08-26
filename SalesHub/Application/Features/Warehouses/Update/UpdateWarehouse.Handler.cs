@@ -18,6 +18,7 @@ public class UpdateWarehouseHandler : IRequestHandler<UpdateWarehouseCommand>
     , name=@Name
     , active=@Active
     , updated_at=CURRENT_TIMESTAMP
+    , branch_id = @BranchId
 	WHERE warehouse_id = @WarehouseId;
     ";
 

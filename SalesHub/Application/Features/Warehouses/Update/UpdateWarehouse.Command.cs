@@ -10,5 +10,6 @@ public class UpdateWarehouseCommand : IRequest, ITransactionalRequest
     public string Code {get;set;} = null!;
     public string Name {get;set;} = null!;
     public bool Active {get;set;}
+    public int BranchId {get;set;}
     IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }
