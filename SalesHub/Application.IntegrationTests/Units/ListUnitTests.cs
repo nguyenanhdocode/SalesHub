@@ -90,6 +90,11 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         _unitIds.Add(unitId3);
         _unitIds.Add(unitId4);
         _unitIds.Add(unitId5);
+
+        await dbSession.Connection.ExecuteAsync(@"
+        UPDATE units SET active = false
+        WHERE unit_id = @UnitId
+        ", new { UnitId = unitId1 });
     }
 
     [Fact]
@@ -247,5 +252,30 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         Assert.Equal(1, res3.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res3.PageSize);
         Assert.Equal(5, count3);
+    }
+
+    [Fact]
+    public async Task Filter_By_Active_Should_Return_One()
+    {
+        using var scope = _fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+
+        var res = await sender.Send(new ListUnitQuery { Active = false }, CancellationToken.None);
+
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}-kg");
+    }
+
+    [Fact]
+    public async Task Filter_By_Active_Should_Return_Many()
+    {
+        using var scope = _fixture.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+
+        var res = await sender.Send(new ListUnitQuery { Active = true }, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+
+        Assert.Equal(4, count);
     }
 }
