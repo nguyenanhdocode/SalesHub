@@ -17,6 +17,7 @@ public class CreateSupplierTests : IClassFixture<ApplicationFixture>
     {
         _fixture = fixture;
     }
+
     public static TheoryData<CreateSupplierCommand, string> InvalidCommands => new()
     {
         {
@@ -124,7 +125,7 @@ public class CreateSupplierTests : IClassFixture<ApplicationFixture>
 
     [Theory]
     [MemberData(nameof(InvalidCommands))]
-    public async Task Create_Should_Validator_Fail(CreateSupplierCommand command, string expectedProperty)
+    public async Task Create_Should_Throw_Validation_Exception(CreateSupplierCommand command, string expectedProperty)
     {
         using var scope = _fixture.CreateScope();
 
@@ -144,24 +145,27 @@ public class CreateSupplierTests : IClassFixture<ApplicationFixture>
         using var scope = _fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
         var code = Guid.NewGuid().ToString("N")[..25];
+        int insertedId = 0;
+
         var command = new CreateSupplierCommand
         {
             Code = code.ToString(),
-            Name = $"Nhà cung cấp {code}",
-            ContactPerson = "Nguyễn Văn A",
-            Phone = "0123456789",
-            TaxCode = "9876543210",
+            Name = $"{code}name",
+            ContactPerson = $"{code}contactperson",
+            Phone = "0300000000",
+            TaxCode = "0400000000",
             Email = $"{code}@gmail.com",
-            Address = "Lê Văn Lương, xã Nhơn Đức, huyện Nhà Bè, Tp.HCM"
+            Address = $"{code}address"
         };
 
         try
         {
 
-            var res = await sender.Send(command, CancellationToken.None);
+            insertedId = await sender.Send(command, CancellationToken.None);
 
-            Assert.True(res > 0);
+            Assert.True(insertedId > 0);
 
             int testId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
             SELECT supplier_id FROM suppliers WHERE code = @Code
@@ -169,51 +173,53 @@ public class CreateSupplierTests : IClassFixture<ApplicationFixture>
             AND tax_code = @TaxCode AND email = @Email AND address = @Address
             ", command);
 
-            Assert.True(res == testId);
+            Assert.Equal(insertedId, testId);
         }
         finally
         {
-            await dbSession.Connection.ExecuteAsync(
-                "DELETE FROM suppliers WHERE code = @Code",
-                new { command.Code });
+            await dataRand.DeleteSupplier(insertedId);
         }
     }
 
     [Fact]
-    public async Task Create_Should_Throw_Fk_Vilolation()
+    public async Task Create_Should_Throw_Unique_Violation()
     {
         using var scope = _fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
         var code = Guid.NewGuid().ToString("N")[..25];
+        int supplierId1 = 0, supplierId2 = 0;
+
         var command = new CreateSupplierCommand
         {
             Code = code.ToString(),
-            Name = $"Nhà cung cấp {code}",
-            ContactPerson = "Nguyễn Văn A",
-            Phone = "0123456789",
-            TaxCode = "9876543210",
+            Name = $"{code}name",
+            ContactPerson = $"{code}contactperson",
+            Phone = "0300000000",
+            TaxCode = "0400000000",
             Email = $"{code}@gmail.com",
-            Address = "Lê Văn Lương, xã Nhơn Đức, huyện Nhà Bè, Tp.HCM"
+            Address = $"{code}address"
         };
 
         try
         {
 
-            var res = await sender.Send(command, CancellationToken.None);
-
+            supplierId1 = await sender.Send(command, CancellationToken.None);
+            Assert.True(supplierId1 > 0);
+            
             var ex = await Assert.ThrowsAsync<PostgresException>(async () =>
             {
-                await sender.Send(command, CancellationToken.None);
+               supplierId2 = await sender.Send(command, CancellationToken.None);
             });
 
-            Assert.True(ex.SqlState == PostgresErrorCodes.UniqueViolation);
+            Assert.Equal(PostgresErrorCodes.UniqueViolation, ex.SqlState);
+            Assert.Equal("suppliers_code_key", ex.ConstraintName);
         }
         finally
         {
-            await dbSession.Connection.ExecuteAsync(
-                "DELETE FROM suppliers WHERE code = @Code",
-                new { command.Code });
+            await dataRand.DeleteSupplier(supplierId1);
+            await dataRand.DeleteSupplier(supplierId2);
         }
     }
 }

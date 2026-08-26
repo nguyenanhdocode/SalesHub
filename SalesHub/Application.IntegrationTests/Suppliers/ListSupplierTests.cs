@@ -16,6 +16,8 @@ namespace Application.IntegrationTests.Suppliers;
 public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly string _prefix = Guid.NewGuid().ToString("N")[..25];
+    private readonly List<int> _supplierIds = [];
 
     public ListSupplierTests(ApplicationFixture fixture)
     {
@@ -25,27 +27,18 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     public async Task DisposeAsync()
     {
         using var scope = _fixture.CreateScope();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-
-        await dbSession.Connection.ExecuteAsync(@"DELETE FROM suppliers WHERE code = ANY(@Codes)"
-            , new
-            {
-                Codes = new[] {
-                "LIST-TEST-SUP001"
-               , "LIST-TEST-SUP002"
-               , "LIST-TEST-SUP003"
-               , "LIST-TEST-SUP004"
-               , "LIST-TEST-SUP005"
-               , "LIST-TEST-SUP006"
-               }
-            });
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        foreach (int id in _supplierIds)
+        {
+            await dataRand.DeleteSupplier(id);
+        }
     }
 
     public async Task InitializeAsync()
     {
         var command1 = new CreateSupplierCommand
         {
-            Code = "LIST-TEST-SUP001",
+            Code = $"{_prefix}SUP001",
             Name = "ABC Pharma",
             ContactPerson = "Nguyễn Văn A",
             Address = "HCM",
@@ -56,7 +49,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
 
         var command2 = new CreateSupplierCommand
         {
-            Code = "LIST-TEST-SUP002",
+            Code = $"{_prefix}SUP002",
             Name = "ABC Pharma",
             ContactPerson = "Nguyễn Văn B",
             Address = "HCM",
@@ -67,7 +60,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
 
         var command3 = new CreateSupplierCommand
         {
-            Code = "LIST-TEST-SUP003",
+            Code = $"{_prefix}SUP003",
             Name = "DEF Pharma",
             ContactPerson = "Nguyễn Văn A",
             Address = "HÀ NỘI",
@@ -78,7 +71,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
 
         var command4 = new CreateSupplierCommand
         {
-            Code = "LIST-TEST-SUP004",
+            Code = $"{_prefix}SUP004",
             Name = "XYZ Pharma",
             ContactPerson = "Nguyễn Văn C",
             Address = "HÀ NỘI",
@@ -89,7 +82,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
 
         var command5 = new CreateSupplierCommand
         {
-            Code = "LIST-TEST-SUP005",
+            Code = $"{_prefix}SUP005",
             Name = "ABC Medical",
             ContactPerson = "Trần Văn A",
             Address = "Đà Nẵng",
@@ -100,7 +93,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
 
         var command6 = new CreateSupplierCommand
         {
-            Code = "LIST-TEST-SUP006",
+            Code = $"{_prefix}SUP006",
             Name = "DEF Medical",
             ContactPerson = "Trần Văn B",
             Address = "Huế",
@@ -113,22 +106,28 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(command1, CancellationToken.None);
-        var res2 = await sender.Send(command2, CancellationToken.None);
-        var res3 = await sender.Send(command3, CancellationToken.None);
-        var res4 = await sender.Send(command4, CancellationToken.None);
-        var res5 = await sender.Send(command5, CancellationToken.None);
-        var res6 = await sender.Send(command6, CancellationToken.None);
+        int supplierId1 = await sender.Send(command1, CancellationToken.None);
+        int supplierId2 = await sender.Send(command2, CancellationToken.None);
+        int supplierId3 = await sender.Send(command3, CancellationToken.None);
+        int supplierId4 = await sender.Send(command4, CancellationToken.None);
+        int supplierId5 = await sender.Send(command5, CancellationToken.None);
+        int supplierId6 = await sender.Send(command6, CancellationToken.None);
 
-        Assert.True(res1 > 0);
-        Assert.True(res2 > 0);
-        Assert.True(res3 > 0);
-        Assert.True(res4 > 0);
-        Assert.True(res5 > 0);
-        Assert.True(res6 > 0);
+        Assert.True(supplierId1 > 0);
+        Assert.True(supplierId2 > 0);
+        Assert.True(supplierId3 > 0);
+        Assert.True(supplierId4 > 0);
+        Assert.True(supplierId5 > 0);
+        Assert.True(supplierId6 > 0);
+
+        _supplierIds.Add(supplierId1);
+        _supplierIds.Add(supplierId2);
+        _supplierIds.Add(supplierId3);
+        _supplierIds.Add(supplierId4);
+        _supplierIds.Add(supplierId5);
+        _supplierIds.Add(supplierId6);
     }
 
-    #region Single field test
     [Fact]
     public async Task List_Should_Return_All()
     {
@@ -136,8 +135,9 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery(), CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(6, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(6, count);
     }
 
     [Fact]
@@ -148,10 +148,10 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
 
         var res = await sender.Send(new ListSupplierQuery()
         {
-            Code = "LIST-TEST-SUP001"
+            Code = $"{_prefix}SUP001"
         }, CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP001");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}SUP001");
     }
 
     [Fact]
@@ -162,10 +162,11 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
 
         var res = await sender.Send(new ListSupplierQuery()
         {
-            Code = "LIST-TEST-SUP"
+            Code = $"{_prefix}SUP"
         }, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(6, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(6, count);
     }
 
     [Fact]
@@ -176,10 +177,10 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
 
         var res = await sender.Send(new ListSupplierQuery()
         {
-            Code = "LIST-TEST-SUP-SOMETHING"
+            Code = $"{_prefix}SOMETHING"
         }, CancellationToken.None);
 
-        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith(_prefix)).ToList());
     }
 
     [Fact]
@@ -193,7 +194,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Name = "DEF Medical"
         }, CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}SUP006");
     }
 
     [Fact]
@@ -206,8 +207,9 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
         {
             Name = "Pharma"
         }, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(4, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(4, count);
     }
 
     [Fact]
@@ -221,7 +223,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Name = "GHI Pharma"
         }, CancellationToken.None);
 
-        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith(_prefix)).ToList());
     }
 
     [Fact]
@@ -235,7 +237,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             ContactPerson = "Trần Văn B"
         }, CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}SUP006");
     }
 
     [Fact]
@@ -248,8 +250,9 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
         {
             ContactPerson = "Trần Văn"
         }, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(2, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(2, count);
     }
 
     [Fact]
@@ -263,7 +266,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             ContactPerson = "Trần Văn F"
         }, CancellationToken.None);
 
-        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith(_prefix)).ToList());
     }
 
     [Fact]
@@ -277,7 +280,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             TaxCode = "TAX006"
         }, CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}SUP006");
     }
 
     [Fact]
@@ -290,8 +293,9 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
         {
             TaxCode = "TAX"
         }, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(6, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());;
+        Assert.Equal(6, count);
     }
 
     [Fact]
@@ -305,7 +309,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             TaxCode = "TAX9999"
         }, CancellationToken.None);
 
-        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith(_prefix)).ToList());
     }
 
     [Fact]
@@ -319,7 +323,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Email = "abc@test.com"
         }, CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP001");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}SUP001");
     }
 
     [Fact]
@@ -332,8 +336,9 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
         {
             Email = "abc"
         }, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(3, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(3, count);
     }
 
     [Fact]
@@ -347,7 +352,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Email = "abcpharma@gmail.com"
         }, CancellationToken.None);
 
-        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith(_prefix)).ToList());
     }
 
     [Fact]
@@ -361,7 +366,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Address = "Huế"
         }, CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}SUP006");
     }
 
     [Fact]
@@ -374,8 +379,9 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
         {
             Address = "HCM"
         }, CancellationToken.None);
+        int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(2, res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(2, count);
     }
 
     [Fact]
@@ -389,11 +395,9 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             Email = "Tây Ninh"
         }, CancellationToken.None);
 
-        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).ToList());
+        Assert.Empty(res.Rows.Where(p => p.Code.StartsWith(_prefix)).ToList());
     }
-    #endregion
 
-    #region Field combine tests
     [Fact]
     public async Task Should_Filter_By_All()
     {
@@ -402,7 +406,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
 
         var res = await sender.Send(new ListSupplierQuery()
         {
-            Code = "LIST-TEST-SUP006",
+            Code = $"{_prefix}SUP006",
             Name = "DEF Medical",
             ContactPerson = "Trần Văn B",
             Address = "Huế",
@@ -411,7 +415,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             TaxCode = "TAX006"
         }, CancellationToken.None);
 
-        Assert.Single(res.Rows, p => p.Code == "LIST-TEST-SUP006");
+        Assert.Single(res.Rows, p => p.Code == $"{_prefix}SUP006");
     }
 
     [Fact]
@@ -421,15 +425,17 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 3}
+        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 3, Code = _prefix}
         , CancellationToken.None);
+        int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(3, res1.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(3, count1);
 
-        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 2, PageSize = 3}
+        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 2, PageSize = 3, Code = _prefix}
         , CancellationToken.None);
+        int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
-        Assert.Equal(3, res2.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(3, count2);
     }
 
     [Fact]
@@ -439,26 +445,28 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 0, PageSize = 50}
+        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 0, PageSize = 50, Code = _prefix}
         , CancellationToken.None);
+        int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(1, res1.PageNumer);
         Assert.Equal(50, res1.PageSize);
-        Assert.Equal(6, res1.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(6, count1);
 
-        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 0}
+        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 0, Code = _prefix}
         , CancellationToken.None);
+        int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(1, res2.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res2.PageSize);
-        Assert.Equal(6, res2.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(6, count2);
 
         var res3 = await sender.Send(new ListSupplierQuery { PageNum = 0, PageSize = 0}
         , CancellationToken.None);
+        int count3 = res3.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(1, res3.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res3.PageSize);
-        Assert.Equal(6, res3.Rows.Where(p => p.Code.StartsWith("LIST-TEST-")).Count());
+        Assert.Equal(6, count3);
     }
-    #endregion
 }

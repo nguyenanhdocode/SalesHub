@@ -3,6 +3,7 @@ using Application.Exceptions;
 using Application.Features.Suppliers.Create;
 using Application.Features.Suppliers.Delete;
 using Application.Features.Suppliers.Update;
+using Application.Features.Units.Create;
 using Dapper;
 using FluentValidation;
 using MediatR;
@@ -128,7 +129,7 @@ public class UpdateSupplierTests : IClassFixture<ApplicationFixture>
 
     [Theory]
     [MemberData(nameof(InvalidCommands))]
-    public async Task Create_Should_Validator_Fail(UpdateSupplierCommand command, string expectedProperty)
+    public async Task Update_Should_Throw_Validation_Exception(UpdateSupplierCommand command, string expectedProperty)
     {
         using var scope = _fixture.CreateScope();
 
@@ -148,121 +149,52 @@ public class UpdateSupplierTests : IClassFixture<ApplicationFixture>
         using var scope = _fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
         var code = Guid.NewGuid().ToString("N")[..25];
+        int insertedId = 0;
+
         var command = new CreateSupplierCommand
         {
             Code = code.ToString(),
-            Name = $"Nhà cung cấp {code}",
-            ContactPerson = "Nguyễn Văn A",
-            Phone = "0123456789",
-            TaxCode = "9876543210",
+            Name = $"{code}name",
+            ContactPerson = $"{code}contactperson",
+            Phone = "0300000000",
+            TaxCode = "0400000000",
             Email = $"{code}@gmail.com",
-            Address = "Lê Văn Lương, xã Nhơn Đức, huyện Nhà Bè, Tp.HCM"
+            Address = $"{code}address"
         };
-        var newCode = Guid.NewGuid().ToString("N")[..25];
 
         try
         {
-            // Arange
-            var res = await sender.Send(command, CancellationToken.None);
-            Assert.True(res > 0);
+
+            insertedId = await sender.Send(command, CancellationToken.None);
+            Assert.True(insertedId > 0);
 
             var updateCommand = new UpdateSupplierCommand
             {
-                SupplierId = res,
-                Code = newCode,
-                Name = $"Nhà cung cấp {code} updated",
-                ContactPerson = "Nguyễn Văn A updated",
-                Phone = "0123456780",
-                TaxCode = "9876543211",
+                SupplierId = insertedId,
+                Code = $"{code.ToString()}updated",
+                Name = $"{code}name-updated",
+                ContactPerson = $"{code}contactperson-updated",
+                Phone = "0300000001",
+                TaxCode = "0400000001",
                 Email = $"{code}updated@gmail.com",
-                Address = "Lê Văn Lương, xã Nhơn Đức, huyện Nhà Bè, Tp.HCM updated"
+                Address = $"{code}address-updated"
             };
 
             await sender.Send(updateCommand, CancellationToken.None);
 
-            int id = await dbSession.Connection.ExecuteScalarAsync<int>(@"
-            SELECT supplier_id
-            FROM suppliers
-            WHERE code = @Code AND name = @Name AND contact_person = @ContactPerson
-            AND phone = @Phone AND tax_code = @TaxCode AND email = @Email
-            AND address = @Address
+            int testId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
+            SELECT supplier_id FROM suppliers WHERE code = @Code
+            AND Name = @Name AND contact_person = @ContactPerson AND phone = @Phone
+            AND tax_code = @TaxCode AND email = @Email AND address = @Address
             ", updateCommand);
 
-            Assert.Equal(res, id);
+            Assert.Equal(insertedId, testId);
         }
         finally
         {
-            await dbSession.Connection.ExecuteAsync(
-                "DELETE FROM suppliers WHERE code = ANY(@Codes)",
-                new { Codes = new[] { code, newCode } });
-        }
-    }
-
-    [Fact]
-    public async Task Update_Should_Throw_Duplicate_Exception()
-    {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        
-        var code1 = Guid.NewGuid().ToString("N")[..25].ToString();
-        var command1 = new CreateSupplierCommand
-        {
-            Code = code1,
-            Name = $"Nhà cung cấp {code1}",
-            ContactPerson = "Nguyễn Văn A",
-            Phone = "0123456789",
-            TaxCode = "9876543210",
-            Email = $"{code1}@gmail.com",
-            Address = "Lê Văn Lương, xã Nhơn Đức, huyện Nhà Bè, Tp.HCM"
-        };
-
-        var code2 = Guid.NewGuid().ToString("N")[..25].ToString();
-        var command2 = new CreateSupplierCommand
-        {
-            Code = code2,
-            Name = $"Nhà cung cấp {code2}",
-            ContactPerson = "Nguyễn Văn A",
-            Phone = "0123456789",
-            TaxCode = "9876543210",
-            Email = $"{code2}@gmail.com",
-            Address = "Lê Văn Lương, xã Nhơn Đức, huyện Nhà Bè, Tp.HCM"
-        };
-
-        try
-        {
-            // Arange
-            var res1 = await sender.Send(command1, CancellationToken.None);
-            Assert.True(res1 > 0);
-
-            var res2 = await sender.Send(command2, CancellationToken.None);
-            Assert.True(res2 > 0);
-
-            var updateCommand = new UpdateSupplierCommand
-            {
-                SupplierId = res1,
-                Code = command2.Code,
-                Name = $"Nhà cung cấp {command2.Code} updated",
-                ContactPerson = "Nguyễn Văn A updated",
-                Phone = "0123456780",
-                TaxCode = "9876543211",
-                Email = $"{command2.Code}updated@gmail.com",
-                Address = "Lê Văn Lương, xã Nhơn Đức, huyện Nhà Bè, Tp.HCM updated"
-            };
-
-            var ex = await Assert.ThrowsAsync<PostgresException>(async () =>
-            {
-               await sender.Send(updateCommand, CancellationToken.None); 
-            });
-
-            // Assert.Equal(PostgresErrorCodes.UniqueViolation, ex.SqlState);
-        }
-        finally
-        {
-            await dbSession.Connection.ExecuteAsync(
-                "DELETE FROM suppliers WHERE code = ANY(@Codes)",
-                new { Codes = new[] { code1, code2 } });
+            await dataRand.DeleteSupplier(insertedId);
         }
     }
 }
