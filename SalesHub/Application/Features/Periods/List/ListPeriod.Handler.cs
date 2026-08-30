@@ -1,6 +1,7 @@
 using System.Text;
 using Application.Database;
 using Application.Models.Common;
+using Application.Shared;
 using Dapper;
 using MediatR;
 
@@ -53,38 +54,28 @@ public class ListPeriodHandler : IRequestHandler<ListPeriodQuery, PagedResult<Pe
             parameters.Add("Name", $"%{request.Name}%");
         }
 
-        if (request.FromDate != null)
-        {
-            filterQueryBuilder.AppendLine(" AND from_date >= @FromDate");
-            parameters.Add("FromDate", $"%{request.FromDate}%");
-        }
-
-        if (request.ToDate != null)
-        {
-            filterQueryBuilder.AppendLine(" AND to_date >= @ToDate");
-            parameters.Add("ToDate", $"%{request.ToDate}%");
-        }
-
         if (request.IsClosed != null)
         {
             filterQueryBuilder.AppendLine(" AND is_closed = @IsClosed");
-            parameters.Add("IsClosed", $"%{request.IsClosed}%");
+            parameters.Add("IsClosed", request.IsClosed);
         }
 
         var counterQueryBuilder = new StringBuilder(COUNTER_SQL);
         counterQueryBuilder.AppendLine(filterQueryBuilder.ToString());
 
         int totalRows = await _dbSession.Connection.ExecuteScalarAsync<int>(counterQueryBuilder.ToString(), parameters);
-        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)request.PageSize));
+        int pageSize = request.PageSize > 0 ? request.PageSize : Constants.PAGE_SIZE;
+        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)pageSize));
+        int pageNum = (request.PageNum > 0 && request.PageNum <= totalPages) ? request.PageNum : 1;
 
         var listQueryBuilder = new StringBuilder(LIST_SQL);
         listQueryBuilder.AppendLine(filterQueryBuilder.ToString());
         listQueryBuilder.AppendLine("ORDER BY Code OFFSET @Offset LIMIT @PageSize");
-        parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
-        parameters.Add("PageSize", request.PageSize);
+        parameters.Add("Offset", (pageNum - 1) * pageSize);
+        parameters.Add("PageSize", pageSize);
 
         var data = await _dbSession.Connection.QueryAsync<PeriodListItem>(listQueryBuilder.ToString(), parameters);
 
-        return new PagedResult<PeriodListItem>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<PeriodListItem>(data, totalPages, pageNum, pageSize);
     }
 }

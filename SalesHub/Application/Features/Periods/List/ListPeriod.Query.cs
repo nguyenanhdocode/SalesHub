@@ -12,8 +12,6 @@ public class ListPeriodQuery : IRequest<PagedResult<PeriodListItem>>, IPaginable
     public int? PeriodId { get; set; }
     public string? Code { get; set; }
     public string? Name { get; set; }
-    public DateTime? FromDate { get; set; }
-    public DateTime? ToDate { get; set; }
     public bool? IsClosed { get; set; }
     public int PageNum { get; set; } = Constants.PAGE_NUM;
     public int PageSize { get; set; } = Constants.PAGE_SIZE;

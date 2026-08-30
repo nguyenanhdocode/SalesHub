@@ -11,7 +11,6 @@ public class UpdatePeriodCommand : IRequest<int>, ITransactionalRequest
     public string Name {get;set;} = null!;
     public DateTime FromDate {get;set;}
     public DateTime ToDate {get;set;}
-    public bool IsClosed {get;set;}
 
-    public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
+    IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }

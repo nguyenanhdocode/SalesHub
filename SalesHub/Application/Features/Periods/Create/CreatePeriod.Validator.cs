@@ -10,7 +10,7 @@ public class CreatePeriodValidator : AbstractValidator<CreatePeriodCommand>
             .NotNull()
             .NotEmpty()
             .MaximumLength(50)
-            .Matches("^[a-zA-Z0-9@-_.@/]+$");
+            .Matches("^[a-zA-Z0-9@-_-./]+$");
 
         RuleFor(p => p.Name)
             .NotNull()
