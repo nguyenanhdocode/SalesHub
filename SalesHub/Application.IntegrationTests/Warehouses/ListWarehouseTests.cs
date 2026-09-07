@@ -19,6 +19,7 @@ public class ListWarehouseTests : IClassFixture<ApplicationFixture>, IAsyncLifet
     private readonly ApplicationFixture _fixture;
     private readonly string _prefix = Guid.NewGuid().ToString("N")[..25];
     private readonly List<int> _warehouseIds = [];
+    private readonly List<int> _branchIds = [];
 
     public ListWarehouseTests(ApplicationFixture fixture)
     {
@@ -34,6 +35,11 @@ public class ListWarehouseTests : IClassFixture<ApplicationFixture>, IAsyncLifet
         {
             await dataSeed.DeleteWarehouse(id);
         }
+
+        foreach (int id in _branchIds)
+        {
+            await dataSeed.DeleteBranch(id);
+        }
     }
 
     public async Task InitializeAsync()
@@ -47,6 +53,9 @@ public class ListWarehouseTests : IClassFixture<ApplicationFixture>, IAsyncLifet
 
         branchId1 = await dataSeed.RandomBranch();
         branchId2 = await dataSeed.RandomBranch();
+
+        _branchIds.Add(branchId1);
+        _branchIds.Add(branchId2);
 
         var command1 = new CreateWarehouseCommand
         {
