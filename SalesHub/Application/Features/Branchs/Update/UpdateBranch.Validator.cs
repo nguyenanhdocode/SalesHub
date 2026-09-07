@@ -15,7 +15,7 @@ public class UpdateBranchValidator : AbstractValidator<UpdateBranchCommand>
             .NotNull()
             .NotEmpty()
             .MaximumLength(100)
-            .Matches("^[a-zA-Z0-9@-_.@]+$");
+            .Matches("^[a-zA-Z0-9@-_-.]+$");
 
         RuleFor(p => p.Name)
             .NotNull()

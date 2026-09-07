@@ -2,7 +2,7 @@ namespace Application.Features.Branchs.Get;
 
 public class GetBranchResponse
 {
-    public string BranchId {get;set;} = null!;
+    public int BranchId {get;set;}
     public string Code {get;set;} = null!;
     public string Name {get;set;} = null!;
     public string? Address {get;set;}

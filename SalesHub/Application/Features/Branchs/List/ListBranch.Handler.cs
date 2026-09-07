@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Application.Database;
 using Application.Interfaces.Common;
 using Application.Models.Common;
+using Application.Shared;
 using Dapper;
 using MediatR;
 
@@ -88,16 +89,18 @@ public class ListBranchHandler : IRequestHandler<ListBranchQuery, PagedResult<Br
         counterQuery.AppendLine(filterBuilder.ToString());
 
         int totalRows = await _dbSession.Connection.ExecuteScalarAsync<int>(counterQuery.ToString(), parameters);
-        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)request.PageSize));
+        int pageSize = request.PageSize > 0 ? request.PageSize : Constants.PAGE_SIZE;
+        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)pageSize));
+        int pageNum = (request.PageNum > 0 && request.PageNum <= totalPages) ? request.PageNum : 1;
 
         var dataQuery = new StringBuilder(FILTER_QUERY);
         dataQuery.AppendLine(filterBuilder.ToString());
         dataQuery.AppendLine("ORDER BY Code OFFSET @Offset LIMIT @PageSize");
-        parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
-        parameters.Add("PageSize", request.PageSize);
+        parameters.Add("Offset", (pageNum - 1) * pageSize);
+        parameters.Add("PageSize", pageSize);
 
         var data = await _dbSession.Connection.QueryAsync<BranchListItem>(dataQuery.ToString(), parameters);
 
-        return new PagedResult<BranchListItem>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<BranchListItem>(data, totalPages, pageNum, pageSize);
     }
 }
