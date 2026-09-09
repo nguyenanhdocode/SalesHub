@@ -216,7 +216,7 @@ public class DataRandom
     public async Task DeleteProduct(int productId)
     {
         await _dbSession.Connection.ExecuteAsync(@"
-        DELETE FROM products WHERE product_id = @ProductId
+        DELETE FROM products WHERE product_id = @ProductId;
         ", new
         {
            ProductId = productId                                          
@@ -230,6 +230,16 @@ public class DataRandom
         ", new
         {
            DocumentId = documentId                                          
+        });
+    }
+
+    public async Task DeleteProductUnits(int productId)
+    {
+        await _dbSession.Connection.ExecuteAsync(@"
+        DELETE FROM product_unit WHERE product_id = @ProductId;
+        ", new
+        {
+           ProductId = productId                                          
         });
     }
 }
