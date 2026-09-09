@@ -13,6 +13,7 @@ public class CreateProductCommand : IRequest<int>, ITransactionalRequest
     public int BaseUnitId {get;set;}
     public bool Active {get;set;}
     public int SupplierId {get;set;}
+    public List<int> UnitIds {get;set;} = [];
 
     public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
 }

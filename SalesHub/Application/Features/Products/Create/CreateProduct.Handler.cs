@@ -40,11 +40,19 @@ public class CreatePrdocutHandler : IRequestHandler<CreateProductCommand, int>
     {
         int id = await _dbSession.Connection.ExecuteScalarAsync<int>(INSERT_QUERY, request, _dbSession.Transaction);
 
-        await _dbSession.Connection.ExecuteAsync(INSERT_PRODUCT_UNIT_SQL, new
+        var productUnits = new List<int>
+        {
+            request.BaseUnitId
+        };
+        productUnits.AddRange(request.UnitIds);
+
+        var inserts = productUnits.Distinct().Select(p => new
         {
             ProductId = id,
-            UnitId = request.BaseUnitId
-        }, _dbSession.Transaction);
+            UnitId = p
+        }).ToList();
+
+        await _dbSession.Connection.ExecuteAsync(INSERT_PRODUCT_UNIT_SQL, inserts, _dbSession.Transaction);
 
         return id;
     }

@@ -15,6 +15,5 @@ public class UpdateProductCommand : IRequest, ITransactionalRequest
     public int BaseUnitId {get;set;}
     public bool Active {get;set;}
     public int SupplierId {get;set;}
-    public List<int> UnitIds {get;set;} = [];
     IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }
