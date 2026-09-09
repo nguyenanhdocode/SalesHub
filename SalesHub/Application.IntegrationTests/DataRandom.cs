@@ -242,4 +242,14 @@ public class DataRandom
            ProductId = productId                                          
         });
     }
+
+    public async Task DeleteUnitConversions(int productId)
+    {
+        await _dbSession.Connection.ExecuteAsync(@"
+        DELETE FROM unit_conversions WHERE product_id = @ProductId;
+        ", new
+        {
+           ProductId = productId                                          
+        });
+    }
 }

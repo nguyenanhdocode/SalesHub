@@ -209,13 +209,21 @@ public class CreateProductTests : IClassFixture<ApplicationFixture>
 
             Assert.Equal(insertedId, actualId);
 
-            int productUnitCount = await dbSession.Connection.ExecuteScalarAsync<int>(@"
+            int productUnitCount1 = await dbSession.Connection.ExecuteScalarAsync<int>(@"
                 SELECT COUNT(*)
                 FROM product_unit
-                WHERE product_id = @ProductId;
+                WHERE product_id = @ProductId AND unit_id = @UnitId;
             ", new { ProductId = insertedId, UnitId = unitId });
 
-            Assert.Equal(2, productUnitCount);
+            Assert.Equal(1, productUnitCount1);
+
+            int productUnitCount2 = await dbSession.Connection.ExecuteScalarAsync<int>(@"
+                SELECT COUNT(*)
+                FROM product_unit
+                WHERE product_id = @ProductId AND unit_id = @UnitId;
+            ", new { ProductId = insertedId, UnitId = baseUnitId });
+
+            Assert.Equal(1, productUnitCount2);
         }
         finally
         {
