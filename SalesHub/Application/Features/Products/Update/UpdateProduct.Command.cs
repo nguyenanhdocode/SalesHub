@@ -15,5 +15,6 @@ public class UpdateProductCommand : IRequest, ITransactionalRequest
     public int BaseUnitId {get;set;}
     public bool Active {get;set;}
     public int SupplierId {get;set;}
+    public decimal VatRate {get;set;}
     IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }

@@ -24,6 +24,7 @@ public class UpdatePrdocutHandler : IRequestHandler<UpdateProductCommand>
     , updated_at=CURRENT_TIMESTAMP
     , active=@Active
     , supplier_id=@SupplierId
+    , vat_rate = @VatRate
 	WHERE product_id=@ProductId;
     ";
 

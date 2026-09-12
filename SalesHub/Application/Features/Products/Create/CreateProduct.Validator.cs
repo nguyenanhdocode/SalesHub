@@ -29,5 +29,7 @@ public class CreateProductValidator : AbstractValidator<CreateProductCommand>
 
         RuleFor(p => p.SupplierId)
             .NotNull();
+
+        RuleFor(p => p.VatRate).GreaterThanOrEqualTo(0);
     }
 }

@@ -13,4 +13,5 @@ public class GetProductResponse
     public int SupplierId { get; set; }
     public string SupplierName { get; set; } = null!;
     public IEnumerable<UnitResponse> Units {get;set;} = [];
+    public decimal VatRate {get;set;}
 }

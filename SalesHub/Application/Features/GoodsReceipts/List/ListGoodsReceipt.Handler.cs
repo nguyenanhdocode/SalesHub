@@ -3,6 +3,7 @@ using System.Text;
 using Application.Database;
 using Application.Interfaces.Database;
 using Application.Models.Common;
+using Application.Shared;
 using Dapper;
 using MediatR;
 
@@ -136,16 +137,18 @@ public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, 
         counterQuery.AppendLine(filterBuilder.ToString());
 
         int totalRows = await _dbSession.Connection.ExecuteScalarAsync<int>(counterQuery.ToString(), parameters);
-        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)request.PageSize));
+        int pageSize = request.PageSize > 0 ? request.PageSize : Constants.PAGE_SIZE;
+        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)pageSize));
+        int pageNum = (request.PageNum > 0 && request.PageNum <= totalPages) ? request.PageNum : 1;
 
         var dataQuery = new StringBuilder(BASE_SQL);
         dataQuery.AppendLine(filterBuilder.ToString());
         dataQuery.AppendLine("ORDER BY CreatedAt OFFSET @Offset LIMIT @PageSize");
-        parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
-        parameters.Add("PageSize", request.PageSize);
+        parameters.Add("Offset", (pageNum - 1) * pageSize);
+        parameters.Add("PageSize", pageSize);
 
         var data = await _dbSession.Connection.QueryAsync<GoodsReceiptListItem>(dataQuery.ToString(), parameters);
 
-        return new PagedResult<GoodsReceiptListItem>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<GoodsReceiptListItem>(data, totalPages, pageNum, pageSize);
     }
 }

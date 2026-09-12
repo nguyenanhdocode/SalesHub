@@ -19,14 +19,18 @@ public class CreatePrdocutHandler : IRequestHandler<CreateProductCommand, int>
         , name
         , costing_method
         , base_unit_id
-        , supplier_id)
+        , supplier_id
+        , vat_rate
+    )
 	VALUES (
         @InternalCode
         , @ExternalCode
         , @Name
         , @CostingMethod
         , @BaseUnitId
-        , @SupplierId)
+        , @SupplierId
+        , @VatRate
+    )
     RETURNING product_id;
     ";
 

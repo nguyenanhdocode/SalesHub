@@ -14,6 +14,7 @@ public class CreateProductCommand : IRequest<int>, ITransactionalRequest
     public bool Active {get;set;}
     public int SupplierId {get;set;}
     public List<int> UnitIds {get;set;} = [];
+    public decimal VatRate {get;set;} = 0;
 
     public IsolationLevel IsolationLevel => IsolationLevel.ReadCommitted;
 }

@@ -29,5 +29,8 @@ public class UpdateProductValidator : AbstractValidator<UpdateProductCommand>
 
         RuleFor(p => p.SupplierId)
             .NotNull();
+
+        RuleFor(p => p.VatRate)
+            .GreaterThanOrEqualTo(0);
     }
 }

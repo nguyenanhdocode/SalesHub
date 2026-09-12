@@ -2,6 +2,7 @@ using Application.Database;
 using Application.Exceptions;
 using Application.Interfaces.Security;
 using Application.Models.InventoryBalances;
+using Application.Services;
 using Application.Shared;
 using Dapper;
 using Infrastructure.Security;
@@ -13,12 +14,15 @@ public class DeleteGoodsReceiptHandler : IRequestHandler<DeleteGoodsReceiptComma
 {
     private readonly DbSession _dbSession;
     private readonly ICurrentUser _currentUser;
+    private readonly QueryService _queryService;
 
     public DeleteGoodsReceiptHandler(DbSession dbSession
-        , ICurrentUser currentUser)
+        , ICurrentUser currentUser
+        , QueryService queryService)
     {
         _dbSession = dbSession;
         _currentUser = currentUser;
+        _queryService = queryService;
     }
 
     const string DELETE_SQL = @"
@@ -41,8 +45,8 @@ public class DeleteGoodsReceiptHandler : IRequestHandler<DeleteGoodsReceiptComma
     )
     , updated AS (
         UPDATE inventory_balances AS ib
-        SET quantity = quantity - lines.actual_quantity
-        , amount = amount - lines.amount
+        SET quantity = ib.quantity - lines.actual_quantity
+        , amount = ib.amount - lines.amount
         FROM lines 
         WHERE ib.warehouse_id = lines.warehouse_id AND ib.product_id = lines.product_id
         AND ib.unit_id = lines.unit_id AND ib.quantity >= lines.actual_quantity
@@ -61,8 +65,16 @@ public class DeleteGoodsReceiptHandler : IRequestHandler<DeleteGoodsReceiptComma
     SELECT status FROM documents WHERE document_id = @DocumentId;
     ";
 
+
     public async Task Handle(DeleteGoodsReceiptCommand request, CancellationToken cancellationToken)
     {
+        bool isPeriodClosed = await _queryService.IsPeriodClosed(request.DocumentId);
+
+        if (isPeriodClosed)
+        {
+            throw new BusinessException("period_closed");
+        }
+
         await _dbSession.Connection.ExecuteAsync(DELETE_SQL, new
         {
             DocumentId = request.DocumentId,

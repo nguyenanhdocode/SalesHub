@@ -27,6 +27,7 @@ public class GetProductHandler : IRequestHandler<GetProductQuery, GetProductResp
         , products.updated_at AS UpdatedAt
         , products.supplier_id AS SupplierId
         , suppliers.name AS SupplierName
+        , products.vat_rate AS VatRate
     FROM public.products
     LEFT JOIN units ON units.unit_id = products.base_unit_id
     LEFT JOIN suppliers ON suppliers.supplier_id = products.supplier_id

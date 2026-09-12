@@ -96,7 +96,7 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
 
     public const string UPSERT_INVENTORY_BALANCE_SQL = @"
     WITH upserted AS (
-        INSERT INTO inventory_balances
+        INSERT INTO inventory_balances AS ib
         (
               warehouse_id
             , product_id
@@ -104,13 +104,13 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
             , quantity
             , amount
         )
-        SELECT
+        SELECT *
         FROM jsonb_to_recordset(@Lines::jsonb) AS x (
-            WarehouseId int,
-            ProductId int,
-            UnitId int,
-            Quantity int,
-            Amount numeric
+            warehouse_id int,
+            product_id int,
+            unit_id int,
+            quantity int,
+            amount numeric
         )
         ON CONFLICT (warehouse_id, product_id, unit_id)
         DO UPDATE SET
@@ -124,7 +124,7 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
     WHERE quantity < 0;
     ";
 
-    const string GET_OLD_STATUS = @"
+    const string GET_CURRENT_STATUS = @"
     SELECT status
     FROM documents WHERE document_id = @DocumentId;
     ";
@@ -144,14 +144,14 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
         }
 
         // Lấy trạng thái hiện tại của phiếu
-        var oldStatus = await _dbSession.Connection.ExecuteScalarAsync<string>(GET_OLD_STATUS, new
+        var currentStatus = await _dbSession.Connection.ExecuteScalarAsync<string>(GET_CURRENT_STATUS, new
         {
             DocumentId = request.DocumentId
         }, _dbSession.Transaction);
 
         // Nếu phiếu đã ở trạng thái posted thì không cho cập nhật trạng thái
-        string newStatus = oldStatus == DocumentStatus.POSTED.ToString() ? oldStatus : request.Status.ToString();
-        
+        string newStatus = currentStatus == DocumentStatus.POSTED.ToString() ? currentStatus : request.Status.ToString();
+
         await _dbSession.Connection.ExecuteAsync(DocumentSqls.UPDATE_DOCUMENT_SQL, new UpdateDocumentParams
         {
             DocumentId = request.DocumentId,
@@ -183,25 +183,25 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
             await _dbSession.Connection.ExecuteAsync(DELETE_LINE_SQL, deletedRows, _dbSession.Transaction);
         }
 
-        var upsertRows = request.Lines.Select(p => new
+        var upsertLines = request.Lines.Select(p => new
         {
             DocumentId = request.DocumentId,
             ProductId = p.ProductId,
             UnitId = p.UnitId,
             ActualQuantity = p.ActualQuantity,
             DocumentQuantity = p.DocumentQuantity,
-            Amount = p.Amount,
+            Amount = p.ActualQuantity * p.UnitPrice * p.VatRate,
             SortOrder = p.SortOrder,
             Note = p.Note,
             UnitPrice = p.UnitPrice
         });
 
-        if (upsertRows.Any())
+        if (upsertLines.Any())
         {
-            await _dbSession.Connection.ExecuteAsync(UPSERT_LINE_SQL, upsertRows, _dbSession.Transaction);
+            await _dbSession.Connection.ExecuteAsync(UPSERT_LINE_SQL, upsertLines, _dbSession.Transaction);
         }
 
-        // Nếu trạng thái của phiếu là POSTED thì mới cập nhật số dư
+        // Cập nhật số dư
         if (newStatus == DocumentStatus.POSTED.ToString())
         {
             int warehouseId = await _dbSession.Connection.ExecuteScalarAsync<int>(GET_WAREHOUSE_ID_SQL, new
@@ -209,38 +209,61 @@ public class UpdateGoodsReceiptHandler : IRequestHandler<UpdateGoodsReceiptComma
                 DocumentId = request.DocumentId
             }, _dbSession.Transaction);
 
-            var upsertBalances = deletedRows
-            .Select(p => new
+            if (currentStatus == DocumentStatus.DRAFT.ToString())
             {
-                WarehouseId = warehouseId,
-                ProductId = p.ProductId,
-                UnitId = p.UnitId,
-                Quantity = -p.ActualQuantity,
-                Amount = -p.Amount
-            })
-            .Union(upsertRows.LeftJoin(dbLines
-                , p => (p.ProductId, p.UnitId)
-                , p => (p.ProductId, p.UnitId)
-                , (req, db) => new
+                var balances = upsertLines.Select(p => new
                 {
-                    WarehouseId = warehouseId,
-                    ProductId = req.ProductId,
-                    UnitId = req.UnitId,
-                    Quantity = req.ActualQuantity - (db != null ? db.ActualQuantity : 0),
-                    Amount = req.Amount - (db != null ? db.Amount : 0),
-                }))
-            .ToList();
+                    warehouse_id = warehouseId,
+                    product_id = p.ProductId,
+                    unit_id = p.UnitId,
+                    quantity = p.ActualQuantity,
+                    amount = p.Amount
+                })
+                .ToList();
 
-            var failedRows = await _dbSession.Connection.QueryAsync<int>(UPSERT_INVENTORY_BALANCE_SQL
+                await _dbSession.Connection.ExecuteAsync(UPSERT_INVENTORY_BALANCE_SQL
+                , new
+                {
+                    Lines = JsonSerializer.Serialize(balances)
+                } , _dbSession.Transaction);
+            }
+            else
+            {
+                var upsertBalances = deletedRows
+                .Select(p => new
+                {
+                    warehouse_id = warehouseId,
+                    product_id = p.ProductId,
+                    unit_id = p.UnitId,
+                    quantity = -p.ActualQuantity,
+                    amount = -p.Amount
+                })
+                .Union(
+                    upsertLines.LeftJoin(dbLines
+                    , p => (p.ProductId, p.UnitId)
+                    , p => (p.ProductId, p.UnitId)
+                    , (req, db) => new
+                    {
+                        warehouse_id = warehouseId,
+                        product_id = req.ProductId,
+                        unit_id = req.UnitId,
+                        quantity = req.ActualQuantity - (db != null ? db.ActualQuantity : 0),
+                        amount = req.Amount - (db != null ? db.Amount : 0),
+                    })
+                )
+                .ToList();
+
+                var failedRows = await _dbSession.Connection.QueryAsync<int>(UPSERT_INVENTORY_BALANCE_SQL
                 , new
                 {
                     Lines = JsonSerializer.Serialize(upsertBalances)
                 }
                 , _dbSession.Transaction);
 
-            if (failedRows.Any())
-            {
-                throw new BusinessException("insufficient_inventory");
+                if (failedRows.Any())
+                {
+                    throw new BusinessException("insufficient_inventory");
+                }
             }
         }
     }

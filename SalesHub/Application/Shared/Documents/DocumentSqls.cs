@@ -32,7 +32,7 @@ public class DocumentSqls
 	SET posting_date=@PostingDate
     , document_date=@DocumentDate
     , period_id=@PeriodId
-    , updated_date=CURRENT_TIMESTAMP
+    , updated_at=CURRENT_TIMESTAMP
     , updated_by=@UpdatedBy
     , note=@Note
     , status=@Status

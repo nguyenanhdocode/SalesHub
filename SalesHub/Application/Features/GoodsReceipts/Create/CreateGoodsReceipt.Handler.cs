@@ -52,6 +52,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
         , sort_order
         , note
         , unit_price
+        , vat_rate
     )
 	VALUES (
 	      @DocumentId
@@ -63,6 +64,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
         , @SortOrder
         , @Note
         , @UnitPrice
+        , @VatRate
     )
     ";
 
@@ -148,13 +150,14 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
             ,
             ActualQuantity = p.ActualQuantity
             ,
-            Amount = p.Amount
+            Amount = p.ActualQuantity * p.UnitPrice * p.VatRate
             ,
             SortOrder = p.SortOrder
             ,
             Note = p.Note
             ,
             UnitPrice = p.UnitPrice
+            , VatRate = p.VatRate
         });
 
         // Insert lines
@@ -170,7 +173,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
             ,
             Quantity = p.ActualQuantity
             ,
-            Amount = p.Amount
+            Amount = p.ActualQuantity * p.UnitPrice * p.VatRate
         });
 
         if (request.Status == DocumentStatus.POSTED)

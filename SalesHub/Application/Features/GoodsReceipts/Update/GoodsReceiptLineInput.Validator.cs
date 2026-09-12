@@ -10,7 +10,7 @@ public class GoodsReceiptLineInputValidator : AbstractValidator<GoodsReceiptLine
         RuleFor(p => p.UnitId).NotNull();
         RuleFor(p => p.DocumentQuantity).NotNull().GreaterThan(0);
         RuleFor(p => p.ActualQuantity).NotNull().GreaterThan(0);
-        RuleFor(p => p.Amount).NotNull().GreaterThan(0);
+        RuleFor(p => p.VatRate).NotNull().GreaterThanOrEqualTo(1);
         RuleFor(p => p.UnitPrice).NotNull().GreaterThan(0);
     }
 }

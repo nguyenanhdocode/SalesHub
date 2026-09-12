@@ -60,6 +60,7 @@ public class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuery, GetG
         , goods_receipt_lines.amount AS Amount
         , goods_receipt_lines.sort_order AS SortOrder
 		, goods_receipt_lines.note AS Note
+        , goods_receipt_lines.unit_price AS UnitPrice
     FROM goods_receipt_lines
     INNER JOIN products ON products.product_id = goods_receipt_lines.product_id
     INNER JOIN units ON units.unit_id = goods_receipt_lines.unit_id

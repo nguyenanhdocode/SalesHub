@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddSingleton<JwtProvider>(p => new JwtProvider(configuration));
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddHttpContextAccessor();
+        services.AddScoped<QueryService>();
 
         services.AddMediatR(cfg =>
         {
