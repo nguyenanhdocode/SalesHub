@@ -4,6 +4,8 @@ using Application.Features.Products.Get;
 using Application.Features.Products.List;
 using Application.Features.Products.UnitConversions.List;
 using Application.Features.Products.UnitConversions.Update;
+using Application.Features.Products.Units.List;
+using Application.Features.Products.Units.Update;
 using Application.Features.Products.Update;
 using Application.Features.Units.Create;
 using Application.Features.Units.Delete;
@@ -95,6 +97,28 @@ public class ProductsController : ControllerBase
     public async Task<IResult> ListUnitConversions(int productId, CancellationToken cancellationToken)
     {
         var units = await _sender.Send(new ListUnitConversionsQuery { ProductId = productId }, cancellationToken);
+
+        return Results.Ok(units);
+    }
+
+    [HttpPut]
+    [Authorize]
+    [Route("{productId}/units")]
+    public async Task<IResult> UpdateUnits(int productId
+    , [FromBody]UpdateProductUnitsCommand command, CancellationToken cancellationToken)
+    {
+        command.ProductId = productId;
+        await _sender.Send(command, cancellationToken);
+
+        return Results.Ok();
+    }
+
+    [HttpGet]
+    [Authorize]
+    [Route("{productId}/units")]
+    public async Task<IResult> ListUnits(int productId, CancellationToken cancellationToken)
+    {
+        var units = await _sender.Send(new ListProductUnitQuery { ProductId = productId }, cancellationToken);
 
         return Results.Ok(units);
     }
