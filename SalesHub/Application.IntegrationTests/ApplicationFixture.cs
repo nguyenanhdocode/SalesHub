@@ -1,3 +1,4 @@
+using Application.Interfaces.Security;
 using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,8 @@ public class ApplicationFixture : IAsyncLifetime
         services.AddApplication(Configuration);
         services.AddScoped<DbSession>(_ => new DbSession(Configuration));
         services.AddScoped<DataRandom>();
+        services.AddScoped<MockCurrentUser>();
+        services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<MockCurrentUser>());
 
         Services = services.BuildServiceProvider();
     }
@@ -36,5 +39,53 @@ public class ApplicationFixture : IAsyncLifetime
     }
 
     public IServiceScope CreateScope()
-        => Services.CreateScope();
+    {
+        var scope = Services.CreateScope();
+        var mockCurrentUser = scope.ServiceProvider.GetRequiredService<MockCurrentUser>();
+        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+
+        var userId = dbSession.Connection.ExecuteScalar<Guid>(@"
+            INSERT INTO users (username, password)
+            VALUES (@Username, @Password)
+            RETURNING user_id;
+        ", new
+        {
+            Username = $"integration-{Guid.NewGuid():N}",
+            Password = Guid.NewGuid().ToString("N")
+        });
+
+        mockCurrentUser.UserId = userId;
+
+        return new CleanupScope(scope, dbSession.Connection, userId);
+    }
+
+    private sealed class CleanupScope : IServiceScope
+    {
+        private readonly IServiceScope _innerScope;
+        private readonly NpgsqlConnection _connection;
+        private readonly Guid _userId;
+
+        public CleanupScope(IServiceScope innerScope, NpgsqlConnection connection, Guid userId)
+        {
+            _innerScope = innerScope;
+            _connection = connection;
+            _userId = userId;
+        }
+
+        public IServiceProvider ServiceProvider => _innerScope.ServiceProvider;
+
+        public void Dispose()
+        {
+            try
+            {
+                _connection.Execute(@"
+                    DELETE FROM users WHERE user_id = @UserId;
+                ", new { UserId = _userId });
+            }
+            finally
+            {
+                _innerScope.Dispose();
+            }
+        }
+    }
 }

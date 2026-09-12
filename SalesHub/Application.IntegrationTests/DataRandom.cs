@@ -128,7 +128,7 @@ public class DataRandom
 
     public async Task<int> RandomSupplier()
     {
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var code = Guid.NewGuid().ToString();
 
         int id = await _dbSession.Connection.ExecuteScalarAsync<int>(@"
             INSERT INTO suppliers (code, name)
@@ -155,7 +155,7 @@ public class DataRandom
 
     public async Task<int> RandomUnit()
     {
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var code = Guid.NewGuid().ToString();
 
         int id = await _dbSession.Connection.ExecuteScalarAsync<int>(@"
             INSERT INTO units (code, name)
@@ -182,7 +182,7 @@ public class DataRandom
 
     public async Task<int> RandomProduct(int unitId, int supplierId)
     {
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var code = Guid.NewGuid().ToString();
 
         int id = await _dbSession.Connection.ExecuteScalarAsync<int>(@"
             INSERT INTO public.products(
@@ -220,6 +220,18 @@ public class DataRandom
         ", new
         {
            ProductId = productId                                          
+        });
+    }
+
+    public async Task InsertProductUnit(int productId, int unitId)
+    {
+        await _dbSession.Connection.ExecuteAsync(@"
+        INSERT INTO product_unit (product_id, unit_id)
+        VALUES (@ProductId, @UnitId)
+        ", new
+        {
+           ProductId = productId,
+           UnitId = unitId                                     
         });
     }
 

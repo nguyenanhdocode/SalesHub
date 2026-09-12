@@ -148,6 +148,20 @@ public class UpdateProductTests : IClassFixture<ApplicationFixture>
                 Active = true
             },
             "CostingMethod"
+        },
+        {
+            new UpdateProductCommand
+            {
+                InternalCode = "P-001",
+                ExternalCode = "EXT-001",
+                Name = "Sản phẩm A",
+                CostingMethod = "AVG",
+                BaseUnitId = 1,
+                SupplierId = 1,
+                Active = true,
+                VatRate = -1
+            },
+            "VatRate"
         }
     };
 
@@ -192,7 +206,8 @@ public class UpdateProductTests : IClassFixture<ApplicationFixture>
                 CostingMethod = "AVG",
                 BaseUnitId = baseUnitId,
                 SupplierId = supplierId,
-                Active = true
+                Active = true,
+                VatRate = 1.1m
             };
 
             insertedId = await sender.Send(command, CancellationToken.None);
@@ -206,7 +221,8 @@ public class UpdateProductTests : IClassFixture<ApplicationFixture>
                 Name = $"{internalCode}-Name-updated",
                 BaseUnitId = unitId,
                 SupplierId = supplierId2,
-                Active = false
+                Active = false,
+                VatRate = 1.2m
             };
 
             await sender.Send(updateCommand, CancellationToken.None);

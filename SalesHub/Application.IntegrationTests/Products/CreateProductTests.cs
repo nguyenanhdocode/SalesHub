@@ -147,6 +147,20 @@ public class CreateProductTests : IClassFixture<ApplicationFixture>
                 Active = true
             },
             "CostingMethod"
+        },
+        {
+            new CreateProductCommand
+            {
+                InternalCode = "P-001",
+                ExternalCode = "EXT-001",
+                Name = "Sản phẩm A",
+                CostingMethod = "AVG",
+                BaseUnitId = 1,
+                SupplierId = 1,
+                Active = true,
+                VatRate = -1
+            },
+            "VatRate"
         }
     };
 
@@ -191,7 +205,8 @@ public class CreateProductTests : IClassFixture<ApplicationFixture>
                 BaseUnitId = baseUnitId,
                 SupplierId = supplierId,
                 Active = true,
-                UnitIds = new List<int> { unitId, baseUnitId }
+                UnitIds = new List<int> { unitId, baseUnitId },
+                VatRate = 1.1m
             };
 
             insertedId = await sender.Send(command, CancellationToken.None);
@@ -204,7 +219,8 @@ public class CreateProductTests : IClassFixture<ApplicationFixture>
                   AND external_code = @ExternalCode
                   AND name = @Name
                   AND base_unit_id = @BaseUnitId
-                  AND supplier_id = @SupplierId;
+                  AND supplier_id = @SupplierId
+                  AND vat_rate = 1.1;
             ", command);
 
             Assert.Equal(insertedId, actualId);

@@ -42,7 +42,8 @@ public class GetProductTests : IClassFixture<ApplicationFixture>
                 CostingMethod = "AVG",
                 BaseUnitId = unitId,
                 SupplierId = supplierId,
-                Active = true
+                Active = true,
+                VatRate = 1.1m
             };
 
             insertedId = await sender.Send(command, CancellationToken.None);
@@ -68,6 +69,7 @@ public class GetProductTests : IClassFixture<ApplicationFixture>
             Assert.Equal(command.BaseUnitId, testBaseUnitId);
             Assert.True(res.Active);
             Assert.Equal(command.SupplierId, testSupplierId);
+            Assert.Equal(command.VatRate, res.VatRate);
         }
         finally
         {
