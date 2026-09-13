@@ -11,23 +11,24 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Periods;
 
-public class DeletePeriodTests : IClassFixture<ApplicationFixture>
+public class DeletePeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public DeletePeriodTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     [Fact]
     public async Task Create_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        string code = Guid.NewGuid().ToString("N")[..25];
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        string code = Guid.NewGuid().ToString();
 
         int periodId = 0;
 
@@ -59,5 +60,16 @@ public class DeletePeriodTests : IClassFixture<ApplicationFixture>
         {
             await dataRand.DeletePeriod(periodId);
         }
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 }

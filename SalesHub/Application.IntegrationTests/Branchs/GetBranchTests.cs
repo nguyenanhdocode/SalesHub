@@ -31,7 +31,7 @@ public class GetBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
         var dataSeed = _scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var code = Guid.NewGuid().ToString();
         int branchId = 0;
 
         try

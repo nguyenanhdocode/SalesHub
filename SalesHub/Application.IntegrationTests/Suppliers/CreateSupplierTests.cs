@@ -9,13 +9,26 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Suppliers;
 
-public class CreateSupplierTests : IClassFixture<ApplicationFixture>
+public class CreateSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public CreateSupplierTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 
     public static TheoryData<CreateSupplierCommand, string> InvalidCommands => new()
@@ -127,9 +140,7 @@ public class CreateSupplierTests : IClassFixture<ApplicationFixture>
     [MemberData(nameof(InvalidCommands))]
     public async Task Create_Should_Throw_Validation_Exception(CreateSupplierCommand command, string expectedProperty)
     {
-        using var scope = _fixture.CreateScope();
-
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
         {
@@ -142,11 +153,10 @@ public class CreateSupplierTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Create_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var code = Guid.NewGuid().ToString();
         int insertedId = 0;
 
         var command = new CreateSupplierCommand
@@ -184,11 +194,10 @@ public class CreateSupplierTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Create_Should_Throw_Unique_Violation()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var code = Guid.NewGuid().ToString();
         int supplierId1 = 0, supplierId2 = 0;
 
         var command = new CreateSupplierCommand

@@ -16,30 +16,37 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
     private readonly List<int> _periodIds = [];
-    private readonly string _prefix = Guid.NewGuid().ToString("N")[..25];
+    private readonly string _prefix = Guid.NewGuid().ToString();
+    private readonly IServiceScope _scope;
 
     public ListPeriodTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     public async Task DisposeAsync()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-
-        foreach (int id in _periodIds)
+        try
         {
-            await dataRand.DeletePeriod(id);
+            var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+            var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+
+            foreach (int id in _periodIds)
+            {
+                await dataRand.DeletePeriod(id);
+            }
+        }
+        finally
+        {
+            _scope.Dispose();
         }
     }
 
     public async Task InitializeAsync()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var command1 = new CreatePeriodCommand
         {
@@ -90,16 +97,15 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 
         await dbSession.Connection.ExecuteAsync(@"
         UPDATE periods SET is_closed = true WHERE period_id = @PeriodId
-        ", new  { PeriodId = periodId1 });
+        ", new { PeriodId = periodId1 });
     }
 
     [Fact]
     public async Task List_Should_Return_All()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
-        var res = await sender.Send(new ListPeriodQuery() {}, CancellationToken.None);
+        var res = await sender.Send(new ListPeriodQuery() { }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(4, count);
@@ -108,8 +114,7 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Code_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListPeriodQuery()
         {
@@ -122,8 +127,7 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Code_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListPeriodQuery()
         {
@@ -137,8 +141,7 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Code_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListPeriodQuery()
         {
@@ -152,8 +155,7 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Name_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListPeriodQuery()
         {
@@ -166,8 +168,7 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Name_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListPeriodQuery()
         {
@@ -181,8 +182,7 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Name_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListPeriodQuery()
         {
@@ -196,8 +196,7 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_IsClosed_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListPeriodQuery()
         {
@@ -210,8 +209,7 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_IsClosed_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListPeriodQuery()
         {
@@ -225,19 +223,18 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Paginate_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListPeriodQuery { PageNum = 1, PageSize = 3, Code = _prefix}
+        var res1 = await sender.Send(new ListPeriodQuery { PageNum = 1, PageSize = 3, Code = _prefix }
         , CancellationToken.None);
-        int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count1 = res1.Rows.Count();
 
         Assert.Equal(3, count1);
 
-        var res2 = await sender.Send(new ListPeriodQuery { PageNum = 2, PageSize = 3, Code = _prefix}
+        var res2 = await sender.Send(new ListPeriodQuery { PageNum = 2, PageSize = 3, Code = _prefix }
         , CancellationToken.None);
-        int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count2 = res2.Rows.Count();
 
         Assert.Equal(1, count2);
     }
@@ -245,29 +242,28 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Paginate_With_Wrong_Number_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListPeriodQuery { PageNum = 0, PageSize = 50, Code = _prefix}
+        var res1 = await sender.Send(new ListPeriodQuery { PageNum = 0, PageSize = 50, Code = _prefix }
         , CancellationToken.None);
-        int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count1 = res1.Rows.Count();
 
         Assert.Equal(1, res1.PageNumer);
         Assert.Equal(50, res1.PageSize);
         Assert.Equal(4, count1);
 
-        var res2 = await sender.Send(new ListPeriodQuery { PageNum = 1, PageSize = 0, Code = _prefix}
+        var res2 = await sender.Send(new ListPeriodQuery { PageNum = 1, PageSize = 0, Code = _prefix }
         , CancellationToken.None);
-        int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count2 = res2.Rows.Count();
 
         Assert.Equal(1, res2.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res2.PageSize);
         Assert.Equal(4, count2);
 
-        var res3 = await sender.Send(new ListPeriodQuery { PageNum = 0, PageSize = 0}
+        var res3 = await sender.Send(new ListPeriodQuery { PageNum = 0, PageSize = 0, Code = _prefix }
         , CancellationToken.None);
-        int count3 = res3.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count3 = res3.Rows.Count();
 
         Assert.Equal(1, res3.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res3.PageSize);

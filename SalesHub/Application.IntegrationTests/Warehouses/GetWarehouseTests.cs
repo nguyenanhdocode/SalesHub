@@ -16,23 +16,35 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Warehouses;
 
-public class GetWarehouseTests : IClassFixture<ApplicationFixture>
+public class GetWarehouseTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public GetWarehouseTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 
     [Fact]
     public async Task Get_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataSeed = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var warehouseCode = Guid.NewGuid().ToString("N")[..25];
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataSeed = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var warehouseCode = Guid.NewGuid().ToString();
         int branchId = 0;
         int warehouseId = 0;
 
@@ -76,8 +88,7 @@ public class GetWarehouseTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Get_Should_Throw_NotFound()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var ex = await Assert.ThrowsAsync<BusinessException>(async () =>
         {

@@ -32,7 +32,7 @@ public class ApplicationFixture : IAsyncLifetime
         Services = services.BuildServiceProvider();
     }
 
-    public async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
         if (Services is IDisposable disposable)
             disposable.Dispose();

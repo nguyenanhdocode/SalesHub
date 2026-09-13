@@ -13,7 +13,7 @@ public class DataRandom
 
     public async Task<int> RandomBranch()
     {
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var code = Guid.NewGuid().ToString();
 
         int branchId = await _dbSession.Connection.ExecuteScalarAsync<int>(@"
             INSERT INTO public.branchs(code, name, address, phone, email, tax_code)
@@ -44,7 +44,7 @@ public class DataRandom
 
     public async Task<int> RandomPeriod()
     {
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var code = Guid.NewGuid().ToString();
 
         int periodId = await _dbSession.Connection.ExecuteScalarAsync<int>(@"
             INSERT INTO public.periods(code, name, from_date, to_date, is_closed)
@@ -73,7 +73,7 @@ public class DataRandom
 
     public async Task<int> RandomWarehouse(int branchId)
     {
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var code = Guid.NewGuid().ToString();
 
         int id = await _dbSession.Connection.ExecuteScalarAsync<int>(@"
             INSERT INTO warehouses (code, name, branch_id)

@@ -13,24 +13,36 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Units;
 
-public class GetUnitTests : IClassFixture<ApplicationFixture>
+public class GetUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public GetUnitTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 
     [Fact]
     public async Task Get_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
         int unitId = 0;
-        string code = Guid.NewGuid().ToString("N")[..25];
+        string code = Guid.NewGuid().ToString();
 
         var command = new CreateUnitCommand
         {
@@ -63,12 +75,11 @@ public class GetUnitTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Get_Should_NotFound()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
         int unitId = 0;
-        string code = Guid.NewGuid().ToString("N")[..25];
+        string code = Guid.NewGuid().ToString();
 
         var command = new CreateUnitCommand
         {

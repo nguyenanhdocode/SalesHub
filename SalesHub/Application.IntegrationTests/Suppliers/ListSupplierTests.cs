@@ -16,21 +16,29 @@ namespace Application.IntegrationTests.Suppliers;
 public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
-    private readonly string _prefix = Guid.NewGuid().ToString("N")[..25];
+    private readonly string _prefix = Guid.NewGuid().ToString();
     private readonly List<int> _supplierIds = [];
+    private readonly IServiceScope _scope;
 
     public ListSupplierTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     public async Task DisposeAsync()
     {
-        using var scope = _fixture.CreateScope();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        foreach (int id in _supplierIds)
+        try
         {
-            await dataRand.DeleteSupplier(id);
+            var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+            foreach (int id in _supplierIds)
+            {
+                await dataRand.DeleteSupplier(id);
+            }
+        }
+        finally
+        {
+            _scope.Dispose();
         }
     }
 
@@ -102,9 +110,8 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
             TaxCode = "TAX006"
         };
 
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         int supplierId1 = await sender.Send(command1, CancellationToken.None);
         int supplierId2 = await sender.Send(command2, CancellationToken.None);
@@ -131,8 +138,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task List_Should_Return_All()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery(), CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
@@ -143,8 +149,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Code_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -157,8 +162,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Code_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -172,8 +176,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Code_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -186,8 +189,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Name_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -200,8 +202,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Name_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -215,8 +216,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Name_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -229,8 +229,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_ContactPerson_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -243,8 +242,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_ContactPerson_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -258,8 +256,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_ContactPerson_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -272,8 +269,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_TaxCode_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -286,8 +282,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_TaxCode_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -301,8 +296,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_TaxCode_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -315,8 +309,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Email_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -329,8 +322,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Email_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -344,8 +336,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Email_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -358,8 +349,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Address_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -372,8 +362,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Address_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -387,8 +376,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Filter_By_Address_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -401,8 +389,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Should_Filter_By_All()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListSupplierQuery()
         {
@@ -421,17 +408,16 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Paginate_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 3, Code = _prefix}
+        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 3, Code = _prefix }
         , CancellationToken.None);
         int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(3, count1);
 
-        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 2, PageSize = 3, Code = _prefix}
+        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 2, PageSize = 3, Code = _prefix }
         , CancellationToken.None);
         int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
@@ -441,29 +427,28 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     [Fact]
     public async Task Paginate_With_Wrong_Number_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 0, PageSize = 50, Code = _prefix}
+        var res1 = await sender.Send(new ListSupplierQuery { PageNum = 0, PageSize = 50, Code = _prefix }
         , CancellationToken.None);
-        int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count1 = res1.Rows.Count();
 
         Assert.Equal(1, res1.PageNumer);
         Assert.Equal(50, res1.PageSize);
         Assert.Equal(6, count1);
 
-        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 0, Code = _prefix}
+        var res2 = await sender.Send(new ListSupplierQuery { PageNum = 1, PageSize = 0, Code = _prefix }
         , CancellationToken.None);
-        int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count2 = res2.Rows.Count();
 
         Assert.Equal(1, res2.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res2.PageSize);
         Assert.Equal(6, count2);
 
-        var res3 = await sender.Send(new ListSupplierQuery { PageNum = 0, PageSize = 0}
+        var res3 = await sender.Send(new ListSupplierQuery { PageNum = 0, PageSize = 0, Code = _prefix }
         , CancellationToken.None);
-        int count3 = res3.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count3 = res3.Rows.Count();
 
         Assert.Equal(1, res3.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res3.PageSize);

@@ -7,13 +7,15 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Products;
 
-public class CreateProductTests : IClassFixture<ApplicationFixture>
+public class CreateProductTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public CreateProductTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     public static TheoryData<CreateProductCommand, string> InvalidCommands => new()
@@ -168,8 +170,7 @@ public class CreateProductTests : IClassFixture<ApplicationFixture>
     [MemberData(nameof(InvalidCommands))]
     public async Task Create_Should_Throw_Validator_Exception(CreateProductCommand command, string expectedProperty)
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
         {
@@ -182,16 +183,15 @@ public class CreateProductTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Create_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
         int insertedId = 0;
-        string internalCode = Guid.NewGuid().ToString("N")[..20];
-        string externalCode = Guid.NewGuid().ToString("N")[..20];
+        string internalCode = Guid.NewGuid().ToString();
+        string externalCode = Guid.NewGuid().ToString();
         int unitId = await dataRand.RandomUnit();
 
         try
@@ -261,7 +261,7 @@ public class CreateProductTests : IClassFixture<ApplicationFixture>
         int unitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
         int insertedId = 0;
-        string internalCode = Guid.NewGuid().ToString("N")[..20];
+        string internalCode = Guid.NewGuid().ToString();
 
         try
         {
@@ -293,5 +293,16 @@ public class CreateProductTests : IClassFixture<ApplicationFixture>
             await dataRand.DeleteUnit(unitId);
             await dataRand.DeleteSupplier(supplierId);
         }
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
     }
 }

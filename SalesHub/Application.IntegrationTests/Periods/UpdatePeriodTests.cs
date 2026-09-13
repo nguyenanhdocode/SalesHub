@@ -11,13 +11,15 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Periods;
 
-public class UpdatePeriodTests : IClassFixture<ApplicationFixture>
+public class UpdatePeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public UpdatePeriodTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     public static TheoryData<UpdatePeriodCommand, string> InvalidCommands => new()
@@ -98,9 +100,7 @@ public class UpdatePeriodTests : IClassFixture<ApplicationFixture>
     [MemberData(nameof(InvalidCommands))]
     public async Task Update_Should_Throw_Validation_Exception(UpdatePeriodCommand command, string expectedProperty)
     {
-        using var scope = _fixture.CreateScope();
-
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
         {
@@ -113,11 +113,10 @@ public class UpdatePeriodTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Update_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        string code = Guid.NewGuid().ToString("N")[..25];
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        string code = Guid.NewGuid().ToString();
 
         int periodId = 0;
 
@@ -137,7 +136,7 @@ public class UpdatePeriodTests : IClassFixture<ApplicationFixture>
             var updateCommand = new UpdatePeriodCommand
             {
                 PeriodId = periodId,
-                Code = $"{code}updated",
+                Code = $"{code}u",
                 Name = $"${code}name-updated",
                 FromDate = DateTime.Now.AddDays(1),
                 ToDate = DateTime.Now.AddDays(30).AddDays(1)
@@ -156,5 +155,16 @@ public class UpdatePeriodTests : IClassFixture<ApplicationFixture>
         {
             await dataRand.DeletePeriod(periodId);
         }
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
     }
 }

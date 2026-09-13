@@ -9,28 +9,40 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Products;
 
-public class ListUnitConversionsTests : IClassFixture<ApplicationFixture>
+public class ListUnitConversionsTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public ListUnitConversionsTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 
     [Fact]
     public async Task List_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
         int insertedId = 0;
-        string internalCode = Guid.NewGuid().ToString("N")[..20];
-        string externalCode = Guid.NewGuid().ToString("N")[..20];
+        string internalCode = Guid.NewGuid().ToString();
+        string externalCode = Guid.NewGuid().ToString();
         int unitId = await dataRand.RandomUnit();
 
         try

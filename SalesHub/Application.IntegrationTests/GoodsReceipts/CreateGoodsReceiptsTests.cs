@@ -12,13 +12,15 @@ using Npgsql;
 
 namespace Application.IntegrationTests.GoodsReceipts;
 
-public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
+public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public CreateGoodsReceiptsTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     public static TheoryData<CreateGoodsReceiptCommand, string> InvalidCommands => new()
@@ -111,9 +113,7 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
     [MemberData(nameof(InvalidCommands))]
     public async Task Create_Should_Throw_Validation_Exception(CreateGoodsReceiptCommand command, string expectedProperty)
     {
-        using var scope = _fixture.CreateScope();
-
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
         {
@@ -126,11 +126,10 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Create_Draft_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var currentUser = scope.ServiceProvider.GetRequiredService<ICurrentUser>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var currentUser = _scope.ServiceProvider.GetRequiredService<ICurrentUser>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
@@ -293,26 +292,28 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
         }
         finally
         {
-            if (inserted != null)
-            {
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipts WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipts WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dataRand.DeleteDocument(inserted.DocumentId);
-            }
-            await dataRand.DeleteProductUnits(productId1);
-            await dataRand.DeleteProductUnits(productId2);
-            await dataRand.DeletePeriod(periodId);
-            await dataRand.DeleteProduct(productId1);
-            await dataRand.DeleteProduct(productId2);
-            await dataRand.DeleteSupplier(supplierId);
+            await dataRand.DeleteDocument(inserted?.DocumentId?? default);
+
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
+            ", new { WarehouseId = warehouseId });
+
             await dataRand.DeleteWarehouse(warehouseId);
             await dataRand.DeleteBranch(branchId);
+            await dataRand.DeleteProductUnits(productId1);
+            await dataRand.DeleteProductUnits(productId2);
+            await dataRand.DeleteProduct(productId1);
+            await dataRand.DeleteProduct(productId2);
+            await dataRand.DeletePeriod(periodId);
+            await dataRand.DeleteSupplier(supplierId);
             await dataRand.DeleteUnit(baseUnitId);
         }
     }
@@ -320,11 +321,10 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Create_Posted_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var currentUser = scope.ServiceProvider.GetRequiredService<ICurrentUser>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var currentUser = _scope.ServiceProvider.GetRequiredService<ICurrentUser>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
@@ -492,30 +492,28 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
         }
         finally
         {
-            if (inserted != null)
-            {
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
-                ", new { WarehouseId = warehouseId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipts WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipts WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dataRand.DeleteDocument(inserted?.DocumentId?? default);
 
-                await dataRand.DeleteDocument(inserted.DocumentId);
-            }
-            await dataRand.DeleteProductUnits(productId1);
-            await dataRand.DeleteProductUnits(productId2);
-            await dataRand.DeletePeriod(periodId);
-            await dataRand.DeleteProduct(productId1);
-            await dataRand.DeleteProduct(productId2);
-            await dataRand.DeleteSupplier(supplierId);
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
+            ", new { WarehouseId = warehouseId });
+
             await dataRand.DeleteWarehouse(warehouseId);
             await dataRand.DeleteBranch(branchId);
+            await dataRand.DeleteProductUnits(productId1);
+            await dataRand.DeleteProductUnits(productId2);
+            await dataRand.DeleteProduct(productId1);
+            await dataRand.DeleteProduct(productId2);
+            await dataRand.DeletePeriod(periodId);
+            await dataRand.DeleteSupplier(supplierId);
             await dataRand.DeleteUnit(baseUnitId);
         }
     }
@@ -523,11 +521,10 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Create_Posted_Should_Increase_Balances()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var currentUser = scope.ServiceProvider.GetRequiredService<ICurrentUser>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var currentUser = _scope.ServiceProvider.GetRequiredService<ICurrentUser>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
@@ -643,44 +640,38 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
         }
         finally
         {
-            if (inserted1 != null)
-            {
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
-                ", new { WarehouseId = warehouseId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted1?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted1.DocumentId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipts WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted1?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipts WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted1.DocumentId });
+            await dataRand.DeleteDocument(inserted1?.DocumentId?? default);
 
-                await dataRand.DeleteDocument(inserted1.DocumentId);
-            }
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted2?.DocumentId ?? default });
 
-            if (inserted2 != null)
-            {
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted2.DocumentId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipts WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted2?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipts WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted2.DocumentId });
+            await dataRand.DeleteDocument(inserted2?.DocumentId?? default);
 
-                await dataRand.DeleteDocument(inserted2.DocumentId);
-            }
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
+            ", new { WarehouseId = warehouseId });
 
-            await dataRand.DeleteProductUnits(productId1);
-            await dataRand.DeleteProductUnits(productId2);
-            await dataRand.DeletePeriod(periodId);
-            await dataRand.DeleteProduct(productId1);
-            await dataRand.DeleteProduct(productId2);
-            await dataRand.DeleteSupplier(supplierId);
             await dataRand.DeleteWarehouse(warehouseId);
             await dataRand.DeleteBranch(branchId);
+            await dataRand.DeleteProductUnits(productId1);
+            await dataRand.DeleteProductUnits(productId2);
+            await dataRand.DeleteProduct(productId1);
+            await dataRand.DeleteProduct(productId2);
+            await dataRand.DeletePeriod(periodId);
+            await dataRand.DeleteSupplier(supplierId);
             await dataRand.DeleteUnit(baseUnitId);
         }
     }
@@ -688,11 +679,10 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Create_Should_Throw_Invalid_PostingDate()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var currentUser = scope.ServiceProvider.GetRequiredService<ICurrentUser>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var currentUser = _scope.ServiceProvider.GetRequiredService<ICurrentUser>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
@@ -752,30 +742,28 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
         }
         finally
         {
-            if (inserted != null)
-            {
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
-                ", new { WarehouseId = warehouseId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipts WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipts WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dataRand.DeleteDocument(inserted?.DocumentId?? default);
 
-                await dataRand.DeleteDocument(inserted.DocumentId);
-            }
-            await dataRand.DeleteProductUnits(productId1);
-            await dataRand.DeleteProductUnits(productId2);
-            await dataRand.DeletePeriod(periodId);
-            await dataRand.DeleteProduct(productId1);
-            await dataRand.DeleteProduct(productId2);
-            await dataRand.DeleteSupplier(supplierId);
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
+            ", new { WarehouseId = warehouseId });
+
             await dataRand.DeleteWarehouse(warehouseId);
             await dataRand.DeleteBranch(branchId);
+            await dataRand.DeleteProductUnits(productId1);
+            await dataRand.DeleteProductUnits(productId2);
+            await dataRand.DeleteProduct(productId1);
+            await dataRand.DeleteProduct(productId2);
+            await dataRand.DeletePeriod(periodId);
+            await dataRand.DeleteSupplier(supplierId);
             await dataRand.DeleteUnit(baseUnitId);
         }
     }
@@ -783,11 +771,10 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Create_Should_Throw_Period_Closed()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var currentUser = scope.ServiceProvider.GetRequiredService<ICurrentUser>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var currentUser = _scope.ServiceProvider.GetRequiredService<ICurrentUser>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
@@ -851,31 +838,40 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>
         }
         finally
         {
-            if (inserted != null)
-            {
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
-                ", new { WarehouseId = warehouseId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipts WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipts WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dataRand.DeleteDocument(inserted?.DocumentId?? default);
 
-                await dataRand.DeleteDocument(inserted.DocumentId);
-            }
-            await dataRand.DeleteProductUnits(productId1);
-            await dataRand.DeleteProductUnits(productId2);
-            await dataRand.DeletePeriod(periodId);
-            await dataRand.DeleteProduct(productId1);
-            await dataRand.DeleteProduct(productId2);
-            await dataRand.DeleteSupplier(supplierId);
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
+            ", new { WarehouseId = warehouseId });
+
             await dataRand.DeleteWarehouse(warehouseId);
             await dataRand.DeleteBranch(branchId);
+            await dataRand.DeleteProductUnits(productId1);
+            await dataRand.DeleteProductUnits(productId2);
+            await dataRand.DeleteProduct(productId1);
+            await dataRand.DeleteProduct(productId2);
+            await dataRand.DeletePeriod(periodId);
+            await dataRand.DeleteSupplier(supplierId);
             await dataRand.DeleteUnit(baseUnitId);
         }
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
     }
 }

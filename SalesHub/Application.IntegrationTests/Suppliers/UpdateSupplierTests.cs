@@ -13,13 +13,26 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Suppliers;
 
-public class UpdateSupplierTests : IClassFixture<ApplicationFixture>
+public class UpdateSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public UpdateSupplierTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 
     public static TheoryData<UpdateSupplierCommand, string> InvalidCommands => new()
@@ -131,9 +144,7 @@ public class UpdateSupplierTests : IClassFixture<ApplicationFixture>
     [MemberData(nameof(InvalidCommands))]
     public async Task Update_Should_Throw_Validation_Exception(UpdateSupplierCommand command, string expectedProperty)
     {
-        using var scope = _fixture.CreateScope();
-
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
         {
@@ -146,18 +157,17 @@ public class UpdateSupplierTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Update_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var code = Guid.NewGuid().ToString();
         int insertedId = 0;
 
         var command = new CreateSupplierCommand
         {
             Code = code.ToString(),
             Name = $"{code}name",
-            ContactPerson = $"{code}contactperson",
+            ContactPerson = $"{code}ct",
             Phone = "0300000000",
             TaxCode = "0400000000",
             Email = $"{code}@gmail.com",
@@ -175,7 +185,7 @@ public class UpdateSupplierTests : IClassFixture<ApplicationFixture>
                 SupplierId = insertedId,
                 Code = $"{code.ToString()}updated",
                 Name = $"{code}name-updated",
-                ContactPerson = $"{code}contactperson-updated",
+                ContactPerson = $"{code}ct-u",
                 Phone = "0300000001",
                 TaxCode = "0400000001",
                 Email = $"{code}updated@gmail.com",

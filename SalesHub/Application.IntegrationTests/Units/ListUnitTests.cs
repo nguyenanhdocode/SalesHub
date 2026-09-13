@@ -19,29 +19,36 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
     private readonly List<int> _unitIds = [];
-    private string _prefix = Guid.NewGuid().ToString("N")[..25];
+    private string _prefix = Guid.NewGuid().ToString();
+    private readonly IServiceScope _scope;
 
     public ListUnitTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     public async Task DisposeAsync()
     {
-        using var scope = _fixture.CreateScope();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-
-        foreach (var unitId in _unitIds)
+        try
         {
-            await dataRand.DeleteUnit(unitId);
+            var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+
+            foreach (var unitId in _unitIds)
+            {
+                await dataRand.DeleteUnit(unitId);
+            }
+        }
+        finally
+        {
+            _scope.Dispose();
         }
     }
 
     public async Task InitializeAsync()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var command1 = new CreateUnitCommand
         {
@@ -100,11 +107,10 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task List_Should_Return_All()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListUnitQuery {}, CancellationToken.None);
+        var res = await sender.Send(new ListUnitQuery { }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(_unitIds.Count, count);
@@ -113,9 +119,8 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Code_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Code = $"{_prefix}-kg" }, CancellationToken.None);
 
@@ -125,9 +130,8 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Code_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Code = _prefix }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
@@ -138,9 +142,8 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Code_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Code = $"{_prefix}-something" }, CancellationToken.None);
 
@@ -150,9 +153,8 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Name_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Name = "Kilogram" }, CancellationToken.None);
 
@@ -162,9 +164,8 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Name_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Name = "gram" }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
@@ -175,9 +176,8 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Name_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Name = $"{_prefix}-gramabc" }, CancellationToken.None);
 
@@ -187,9 +187,8 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Should_Filter_By_All_Fields()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Code = $"{_prefix}-kg", Name = "Kilogram" }
         , CancellationToken.None);
@@ -200,23 +199,22 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Paginate_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListUnitQuery { PageNum = 1, PageSize = 2, Code = _prefix}
+        var res1 = await sender.Send(new ListUnitQuery { PageNum = 1, PageSize = 2, Code = _prefix }
         , CancellationToken.None);
         int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(2, count1);
 
-        var res2 = await sender.Send(new ListUnitQuery { PageNum = 2, PageSize = 2, Code = _prefix}
+        var res2 = await sender.Send(new ListUnitQuery { PageNum = 2, PageSize = 2, Code = _prefix }
         , CancellationToken.None);
         int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(2, count2);
 
-        var res3 = await sender.Send(new ListUnitQuery { PageNum = 3, PageSize = 2, Code = _prefix}
+        var res3 = await sender.Send(new ListUnitQuery { PageNum = 3, PageSize = 2, Code = _prefix }
         , CancellationToken.None);
 
         Assert.Single(res3.Rows, p => p.Code.StartsWith(_prefix));
@@ -225,27 +223,26 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Paginate_With_Wrong_Number_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res1 = await sender.Send(new ListUnitQuery { PageNum = 0, PageSize = 50, Code = _prefix}
+        var res1 = await sender.Send(new ListUnitQuery { PageNum = 0, PageSize = 50, Code = _prefix }
         , CancellationToken.None);
-        int count1 = res1.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count1 = res1.Rows.Count();
 
         Assert.Equal(1, res1.PageNumer);
         Assert.Equal(50, res1.PageSize);
         Assert.Equal(5, count1);
 
-        var res2 = await sender.Send(new ListUnitQuery { PageNum = 1, PageSize = 0, Code = _prefix}
+        var res2 = await sender.Send(new ListUnitQuery { PageNum = 1, PageSize = 0, Code = _prefix }
         , CancellationToken.None);
-        int count2 = res2.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
+        int count2 = res2.Rows.Count();
 
         Assert.Equal(1, res2.PageNumer);
         Assert.Equal(Constants.PAGE_SIZE, res2.PageSize);
         Assert.Equal(5, count2);
 
-        var res3 = await sender.Send(new ListUnitQuery { PageNum = 0, PageSize = 0, Code = _prefix}
+        var res3 = await sender.Send(new ListUnitQuery { PageNum = 0, PageSize = 0, Code = _prefix }
         , CancellationToken.None);
         int count3 = res3.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
@@ -257,9 +254,8 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Active_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Active = false }, CancellationToken.None);
 
@@ -269,9 +265,8 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Active_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
         var res = await sender.Send(new ListUnitQuery { Active = true }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();

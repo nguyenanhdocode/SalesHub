@@ -15,23 +15,35 @@ using Npgsql;
 
 namespace Application.IntegrationTests.GoodsReceipts;
 
-public class GetGoodsReceiptsTests : IClassFixture<ApplicationFixture>
+public class GetGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public GetGoodsReceiptsTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
     }
 
     [Fact]
     public async Task Get_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var currentUser = scope.ServiceProvider.GetRequiredService<ICurrentUser>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var currentUser = _scope.ServiceProvider.GetRequiredService<ICurrentUser>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
@@ -130,18 +142,18 @@ public class GetGoodsReceiptsTests : IClassFixture<ApplicationFixture>
             Assert.Equal(inserted.DocumentId, res.DocumentId);
             Assert.Equal(inserted.DocumentNo, res.DocumentNo);
 
-            Assert.Equal(command.DocumentDate.Year, res.DocumentDate.Year);
-            Assert.Equal(command.DocumentDate.Month, res.DocumentDate.Month);
-            Assert.Equal(command.DocumentDate.Day, res.DocumentDate.Day);
+            Assert.Equal(updateCommand.DocumentDate.Year, res.DocumentDate.Year);
+            Assert.Equal(updateCommand.DocumentDate.Month, res.DocumentDate.Month);
+            Assert.Equal(updateCommand.DocumentDate.Day, res.DocumentDate.Day);
             
-            Assert.Equal(command.PostingDate.Year, res.PostingDate.Year);
-            Assert.Equal(command.PostingDate.Month, res.PostingDate.Month);
-            Assert.Equal(command.PostingDate.Day, res.PostingDate.Day);
+            Assert.Equal(updateCommand.PostingDate.Year, res.PostingDate.Year);
+            Assert.Equal(updateCommand.PostingDate.Month, res.PostingDate.Month);
+            Assert.Equal(updateCommand.PostingDate.Day, res.PostingDate.Day);
 
             int actualPeriodId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
             SELECT period_id FROM periods WHERE code = @Code AND name = @Name
             ", new { Code = res.PeriodCode,  Name = res.PeriodName});
-            Assert.Equal(command.PeriodId, actualPeriodId);
+            Assert.Equal(updateCommand.PeriodId, actualPeriodId);
 
             Assert.Equal(DateTime.UtcNow.Year, res.CreatedAt.Year);
             Assert.Equal(DateTime.UtcNow.Month, res.CreatedAt.Month);
@@ -174,7 +186,7 @@ public class GetGoodsReceiptsTests : IClassFixture<ApplicationFixture>
             Assert.Equal(currentUser.UserId, actualUpdatedUserId);
 
             Assert.Equal(DocumentStatus.POSTED.ToString(), res.Status);
-            Assert.Equal(command.ShipperName, res.ShipperName);
+            Assert.Equal(updateCommand.ShipperName, res.ShipperName);
 
             int actualWarehouseId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
             SELECT warehouse_id FROM warehouses 
@@ -185,83 +197,61 @@ public class GetGoodsReceiptsTests : IClassFixture<ApplicationFixture>
 
             // Lines asserts
             // Line1
-            int actualProductId1 = await dbSession.Connection.ExecuteScalarAsync<int>(@"
-            SELECT product_id FROM products 
-            WHERE internal_code = @Code AND name = @Name
-            ", new
-            { 
-                Code = res.Lines[0].ProductInternalCode,
-                Name = res.Lines[0].ProductName,
-            });
-
-            int actualUnitId1 = await dbSession.Connection.ExecuteScalarAsync<int>(@"
-            SELECT unit_id FROM units 
-            WHERE code = @Code AND name = @Name
-            ", new
-            { 
-                Code = res.Lines[0].UnitCode,
-                Name = res.Lines[0].UnitName,
-            });
-
-            Assert.Single(res.Lines, p => p.ProductId == actualProductId1 && p.UnitId == actualUnitId1
+            Assert.Single(res.Lines, p => p.ProductId == updateCommand.Lines[0].ProductId 
+                && p.UnitId == updateCommand.Lines[0].UnitId
                 && p.ActualQuantity == updateCommand.Lines[0].ActualQuantity
                 && p.DocumentQuantity == updateCommand.Lines[0].DocumentQuantity
                 && p.Amount == updateCommand.Lines[0].ActualQuantity * updateCommand.Lines[0].UnitPrice * updateCommand.Lines[0].VatRate
                 && p.Note == updateCommand.Lines[0].Note);
 
             // Line2
-            int actualProductId2 = await dbSession.Connection.ExecuteScalarAsync<int>(@"
-            SELECT product_id FROM products 
-            WHERE internal_code = @Code AND name = @Name
-            ", new
-            { 
-                Code = res.Lines[1].ProductInternalCode,
-                Name = res.Lines[1].ProductName,
-            });
-
-            int actualUnitId2 = await dbSession.Connection.ExecuteScalarAsync<int>(@"
-            SELECT unit_id FROM units 
-            WHERE code = @Code AND name = @Name
-            ", new
-            { 
-                Code = res.Lines[1].UnitCode,
-                Name = res.Lines[1].UnitName,
-            });
-
-            Assert.Single(res.Lines, p => p.ProductId == actualProductId2 
-                && p.UnitId == actualUnitId2
+            Assert.Single(res.Lines, p => p.ProductId == updateCommand.Lines[1].ProductId 
+                && p.UnitId == updateCommand.Lines[1].UnitId
                 && p.ActualQuantity == updateCommand.Lines[1].ActualQuantity
                 && p.DocumentQuantity == updateCommand.Lines[1].DocumentQuantity
                 && p.Amount == updateCommand.Lines[1].ActualQuantity * updateCommand.Lines[1].UnitPrice * updateCommand.Lines[1].VatRate
                 && p.Note == updateCommand.Lines[1].Note);
 
+            foreach (var line in res.Lines)
+            {
+                int actualProductId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
+                SELECT product_id FROM products WHERE internal_code = @Code AND name = @Name;
+                ", new { Code = line.ProductInternalCode, Name = line.ProductName });
+
+                Assert.Equal(line.ProductId, actualProductId);
+
+                int actualUnitId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
+                SELECT unit_id FROM units WHERE code = @Code AND name = @Name;
+                ", new { Code = line.UnitCode, Name = line.UnitName });
+
+                Assert.Equal(line.UnitId, actualUnitId);
+            }
+
         }
         finally
         {
-            if (inserted != null)
-            {
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
-                ", new { WarehouseId = warehouseId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipt_lines WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM goods_receipts WHERE document_id = @DocumentId
+            ", new { DocumentId = inserted?.DocumentId ?? default });
 
-                await dbSession.Connection.ExecuteAsync(@"
-                DELETE FROM goods_receipts WHERE document_id = @DocumentId
-                ", new { DocumentId = inserted.DocumentId });
+            await dataRand.DeleteDocument(inserted?.DocumentId?? default);
 
-                await dataRand.DeleteDocument(inserted.DocumentId);
-            }
-            await dataRand.DeleteProductUnits(productId1);
-            await dataRand.DeleteProductUnits(productId2);
-            await dataRand.DeletePeriod(periodId);
-            await dataRand.DeleteProduct(productId1);
-            await dataRand.DeleteProduct(productId2);
-            await dataRand.DeleteSupplier(supplierId);
+            await dbSession.Connection.ExecuteAsync(@"
+            DELETE FROM inventory_balances WHERE warehouse_id = @WarehouseId
+            ", new { WarehouseId = warehouseId });
+
             await dataRand.DeleteWarehouse(warehouseId);
             await dataRand.DeleteBranch(branchId);
+            await dataRand.DeleteProductUnits(productId1);
+            await dataRand.DeleteProductUnits(productId2);
+            await dataRand.DeleteProduct(productId1);
+            await dataRand.DeleteProduct(productId2);
+            await dataRand.DeletePeriod(periodId);
+            await dataRand.DeleteSupplier(supplierId);
             await dataRand.DeleteUnit(baseUnitId);
         }
     }

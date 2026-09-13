@@ -9,28 +9,29 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Products;
 
-public class UpdateProductUnitsTests : IClassFixture<ApplicationFixture>
+public class UpdateProductUnitsTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public UpdateProductUnitsTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     [Fact]
     public async Task Update_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
         int insertedId = 0;
-        string internalCode = Guid.NewGuid().ToString("N")[..20];
-        string externalCode = Guid.NewGuid().ToString("N")[..20];
+        string internalCode = Guid.NewGuid().ToString();
+        string externalCode = Guid.NewGuid().ToString();
         int unitId1 = await dataRand.RandomUnit();
         int unitId2 = await dataRand.RandomUnit();
 
@@ -81,16 +82,15 @@ public class UpdateProductUnitsTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Update_Delete_Many_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
         int insertedId = 0;
-        string internalCode = Guid.NewGuid().ToString("N")[..20];
-        string externalCode = Guid.NewGuid().ToString("N")[..20];
+        string internalCode = Guid.NewGuid().ToString();
+        string externalCode = Guid.NewGuid().ToString();
         int unitId1 = await dataRand.RandomUnit();
         int unitId2 = await dataRand.RandomUnit();
 
@@ -141,16 +141,15 @@ public class UpdateProductUnitsTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Update_Delete_Should_Throw_Base_Unit_Delete_Restrict()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
 
         int baseUnitId = await dataRand.RandomUnit();
         int supplierId = await dataRand.RandomSupplier();
         int insertedId = 0;
-        string internalCode = Guid.NewGuid().ToString("N")[..20];
-        string externalCode = Guid.NewGuid().ToString("N")[..20];
+        string internalCode = Guid.NewGuid().ToString();
+        string externalCode = Guid.NewGuid().ToString();
         int unitId1 = await dataRand.RandomUnit();
         int unitId2 = await dataRand.RandomUnit();
 
@@ -193,5 +192,16 @@ public class UpdateProductUnitsTests : IClassFixture<ApplicationFixture>
             await dataRand.DeleteUnit(unitId2);
             await dataRand.DeleteSupplier(supplierId);
         }
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
     }
 }

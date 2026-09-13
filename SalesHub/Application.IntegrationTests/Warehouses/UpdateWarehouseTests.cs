@@ -12,12 +12,25 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Warehouses;
 
-public class UpdateWarehouseTests : IClassFixture<ApplicationFixture>
+public class UpdateWarehouseTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
     public UpdateWarehouseTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 
     public static TheoryData<UpdateWarehouseCommand, string> InvalidCommands => new()
@@ -82,9 +95,7 @@ public class UpdateWarehouseTests : IClassFixture<ApplicationFixture>
     [MemberData(nameof(InvalidCommands))]
     public async Task Update_Should_Throw_Validator_Exception(UpdateWarehouseCommand command, string expectedProperty)
     {
-        using var scope = _fixture.CreateScope();
-
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
         {
@@ -97,11 +108,10 @@ public class UpdateWarehouseTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Update_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var warehouseCode = Guid.NewGuid().ToString("N")[..25];
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var warehouseCode = Guid.NewGuid().ToString();
         int branchId = 0;
         int warehouseId = 0;
 

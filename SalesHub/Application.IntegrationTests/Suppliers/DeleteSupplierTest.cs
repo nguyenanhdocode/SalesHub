@@ -11,13 +11,26 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Suppliers;
 
-public class DeleteSupplierTests : IClassFixture<ApplicationFixture>
+public class DeleteSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public DeleteSupplierTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 
     [Fact]
@@ -27,7 +40,7 @@ public class DeleteSupplierTests : IClassFixture<ApplicationFixture>
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
         var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-        var code = Guid.NewGuid().ToString("N")[..25];
+        var code = Guid.NewGuid().ToString();
         int insertedId = 0;
 
         var command = new CreateSupplierCommand
