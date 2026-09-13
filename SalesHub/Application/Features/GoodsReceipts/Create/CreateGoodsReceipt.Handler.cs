@@ -104,7 +104,14 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
         }
 
         var id = Guid.CreateVersion7();
-        var docNo = await _docNoService.GetNextDocumentNo("GR", request.DocumentDate.Year, request.DocumentDate.Month);
+
+        string docNo = request.DocumentNo;
+
+        if (string.IsNullOrEmpty(docNo))
+        {
+            docNo = await _docNoService.GetNextDocumentNo("GR", request.DocumentDate.Year, request.DocumentDate.Month);
+        }
+
 
         // Insert dữ liệu bảng documents
         await _dbSession.Connection.ExecuteAsync(DocumentSqls.INSERT_DOCUMENT_SQL, new CreateDocumentParams
@@ -157,7 +164,8 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
             Note = p.Note
             ,
             UnitPrice = p.UnitPrice
-            , VatRate = p.VatRate
+            ,
+            VatRate = p.VatRate
         });
 
         // Insert lines

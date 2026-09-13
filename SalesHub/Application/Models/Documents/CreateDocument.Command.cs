@@ -7,6 +7,7 @@ namespace Application.Models.Documents;
 
 public class CreateDocumentCommand : IRequest<CreateDocumentResponse>
 {
+    public string DocumentNo {get;set;} = null!;
     public DateTime PostingDate {get;set;}
     public DateTime DocumentDate {get;set;}
     public int PeriodId {get;set;}

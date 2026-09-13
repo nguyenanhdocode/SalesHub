@@ -40,6 +40,7 @@ public class ListGoodsReceiptsHandler : IRequestHandler<ListGoodsReceiptsQuery, 
         , warehouses.branch_id AS BranchId
         , branchs.code AS BranchCode
         , branchs.name AS BranchName
+        , documents.note
     FROM documents
     INNER JOIN goods_receipts ON goods_receipts.document_id = documents.document_id
     INNER JOIN periods ON periods.period_id = documents.period_id
