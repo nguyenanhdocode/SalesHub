@@ -11,28 +11,35 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
     private readonly List<int> _branchIds = [];
-    private readonly string _prefix = Guid.NewGuid().ToString("N")[..25];
+    private readonly string _prefix = Guid.NewGuid().ToString();
+    private readonly IServiceScope _scope;
 
     public ListBranchTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     public async Task DisposeAsync()
     {
-        using var scope = _fixture.CreateScope();
-        var dataRand = scope.ServiceProvider.GetRequiredService<DataRandom>();
-
-        foreach (int id in _branchIds)
+        try
         {
-            await dataRand.DeleteBranch(id);
+            var dataRand = _scope.ServiceProvider.GetRequiredService<DataRandom>();
+
+            foreach (int id in _branchIds)
+            {
+                await dataRand.DeleteBranch(id);
+            }
+        }
+        finally
+        {
+            _scope.Dispose();
         }
     }
 
     public async Task InitializeAsync()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var command1 = new CreateBranchCommand
         {
@@ -93,8 +100,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task List_Should_Return_All()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery(), CancellationToken.None);
         int count = res.Rows.Count(p => p.Code.StartsWith(_prefix));
@@ -105,8 +111,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Code_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -119,8 +124,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Code_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -134,8 +138,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Code_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -148,8 +151,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Name_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -162,8 +164,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Name_Should_Return_Many()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -177,8 +178,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Name_Should_Return_Empty()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -191,8 +191,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Address_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -205,8 +204,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Phone_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -219,8 +217,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_Email_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -233,8 +230,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Filter_By_TaxCode_Should_Return_One()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -247,8 +243,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Should_Filter_By_All_Fields()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res = await sender.Send(new ListBranchQuery
         {
@@ -266,8 +261,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Paginate_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res1 = await sender.Send(new ListBranchQuery { PageNum = 1, PageSize = 2, Code = _prefix }, CancellationToken.None);
         int count1 = res1.Rows.Count(p => p.Code.StartsWith(_prefix));
@@ -283,8 +277,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     [Fact]
     public async Task Paginate_With_Wrong_Number_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var res1 = await sender.Send(new ListBranchQuery { PageNum = 0, PageSize = 50, Code = _prefix }, CancellationToken.None);
         int count1 = res1.Rows.Count(p => p.Code.StartsWith(_prefix));

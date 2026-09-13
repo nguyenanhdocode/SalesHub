@@ -14,13 +14,15 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Branchs;
 
-public class UpdateBranchTests : IClassFixture<ApplicationFixture>
+public class UpdateBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public UpdateBranchTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     public static TheoryData<UpdateBranchCommand, string> InvalidCommands => new()
@@ -123,9 +125,7 @@ public class UpdateBranchTests : IClassFixture<ApplicationFixture>
     [MemberData(nameof(InvalidCommands))]
     public async Task Update_Should_Throw_Validator_Exception(UpdateBranchCommand command, string expectedProperty)
     {
-        using var scope = _fixture.CreateScope();
-
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
         {
@@ -138,10 +138,9 @@ public class UpdateBranchTests : IClassFixture<ApplicationFixture>
     [Fact]
     public async Task Update_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataSeed = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataSeed = _scope.ServiceProvider.GetRequiredService<DataRandom>();
         var code = Guid.NewGuid().ToString("N")[..25];
         int branchId = 0;
 
@@ -184,5 +183,16 @@ public class UpdateBranchTests : IClassFixture<ApplicationFixture>
         {
             await dataSeed.DeleteBranch(branchId);
         }
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task DisposeAsync()
+    {
+        _scope.Dispose();
+        return Task.CompletedTask;
     }
 }

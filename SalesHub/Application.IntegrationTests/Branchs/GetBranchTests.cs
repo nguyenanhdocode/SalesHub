@@ -14,22 +14,23 @@ using Npgsql;
 
 namespace Application.IntegrationTests.Branchs;
 
-public class GetBranchTests : IClassFixture<ApplicationFixture>
+public class GetBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 {
     private readonly ApplicationFixture _fixture;
+    private readonly IServiceScope _scope;
 
     public GetBranchTests(ApplicationFixture fixture)
     {
         _fixture = fixture;
+        _scope = fixture.CreateScope();
     }
 
     [Fact]
     public async Task Create_Should_Success()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var dbSession = scope.ServiceProvider.GetRequiredService<DbSession>();
-        var dataSeed = scope.ServiceProvider.GetRequiredService<DataRandom>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
+        var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
+        var dataSeed = _scope.ServiceProvider.GetRequiredService<DataRandom>();
         var code = Guid.NewGuid().ToString("N")[..25];
         int branchId = 0;
 
@@ -64,11 +65,15 @@ public class GetBranchTests : IClassFixture<ApplicationFixture>
         }
     }
 
+    public async Task DisposeAsync()
+    {
+        _scope.Dispose();
+    }
+
     [Fact]
     public async Task Get_Should_Throw_NotFound()
     {
-        using var scope = _fixture.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
         var ex = await Assert.ThrowsAsync<BusinessException>(async () =>
         {
@@ -76,5 +81,10 @@ public class GetBranchTests : IClassFixture<ApplicationFixture>
         });
 
         Assert.Equal("notfound", ex.Code);
+    }
+
+    public Task InitializeAsync()
+    {
+        return Task.CompletedTask;
     }
 }
