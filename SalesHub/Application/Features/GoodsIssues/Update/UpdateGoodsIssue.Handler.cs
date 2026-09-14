@@ -95,24 +95,24 @@ public class UpdateGoodsIssueHandler : IRequestHandler<UpdateGoodsIssueCommand>
     const string UPDATE_BALANCE_SQL = @"
     WITH lines AS (
         SELECT *
-        FROM jsonb_to_record(@Lines::jsonb) AS x (
-            WarehouseId int,
-            ProductId int,
-            UnitId int,
-            Quantity int,
-            Amount numeric
+        FROM jsonb_to_recordset(@Lines::jsonb) AS x (
+            warehouse_id int,
+            product_id int,
+            unit_id int,
+            quantity int,
+            amount numeric
         )
+    ),
+    updated AS (
+        UPDATE inventory_balances AS ib
+        SET quantity = ib.quantity - lines.quantity
+        , amount = ib.amount - lines.amount
+        FROM lines
+        WHERE lines.warehouse_id = ib.warehouse_id AND lines.product_id = ib.product_id
+        AND lines.unit_id = ib.unit_id
+        RETURNING ib.warehouse_id, ib.product_id, ib.unit_id, ib.quantity
     )
-    , updated AS (
-        UPDATE inventory_balances AS target
-        SET quantity = quantity + x.Quantity
-            , amount = amount + x.Amount
-        WHERE target.warehouse_id = lines.WarehouseId 
-            AND target.product_id = lines.product_id
-            AND target.unit_id = lines.unit_id
-        RETURNING target.warehouse_id, target.product_id, target.quantity
-    )
-    SELECT DISTINCT lines.product_id
+    SELECT COUNT(lines.product_id)
     FROM lines
     LEFT JOIN updated ON updated.warehouse_id = lines.warehouse_id
     AND updated.product_id = lines.product_id
@@ -179,49 +179,87 @@ public class UpdateGoodsIssueHandler : IRequestHandler<UpdateGoodsIssueCommand>
             await _dbSession.Connection.ExecuteAsync(DELETE_LINE_SQL, deleteRows, _dbSession.Transaction);
         }
 
-        var upsertRows = request.Lines;
+        var upsertRows = request.Lines.Select(p => new
+        {
+            DocumentId = request.DocumentId
+            ,
+            ProductId = p.ProductId
+            ,
+            UnitId = p.UnitId
+            ,
+            DocumentQuantity = p.DocumentQuantity
+            ,
+            ActualQuantity = p.ActualQuantity
+            ,
+            Amount = p.ActualQuantity * p.UnitPrice
+            ,
+            SortOrder = p.SortOrder
+            ,
+            Note = p.Note
+            ,
+            UnitPrice = p.UnitPrice
+        }).ToList();
 
         if (upsertRows.Any())
         {
             await _dbSession.Connection.ExecuteAsync(UPSERT_LINES_SQL, upsertRows, _dbSession.Transaction);
         }
 
-        int warehouseId = await _dbSession.Connection.ExecuteScalarAsync<int>(GET_WAREHOUSE_ID_SQL, new
+        if (newStatus == DocumentStatus.POSTED.ToString())
         {
-            DocumentId = request.DocumentId
-        }, _dbSession.Transaction);
-
-        var updateBalances = deleteRows.Select(p => new InventoryBalanceParams
-        {
-            WarehouseId = warehouseId,
-            ProductId = p.ProductId,
-            UnitId = p.UnitId,
-            Quantity = p.ActualQuantity,
-            Amount = p.Amount
-        })
-        .Union(upsertRows.LeftJoin(dbLines
-            , p => (p.ProductId, p.UnitId)
-            , p => (p.ProductId, p.UnitId)
-            , (req, db) => new InventoryBalanceParams
+            int warehouseId = await _dbSession.Connection.ExecuteScalarAsync<int>(GET_WAREHOUSE_ID_SQL, new
             {
-                WarehouseId = warehouseId,
-                ProductId = req.ProductId,
-                UnitId = req.UnitId,
-                Quantity = -(req.ActualQuantity - (db != null ? db.ActualQuantity : 0)),
-                Amount = -(req.Amount - (db != null ? db.Amount : 0)),
-            }))
-        .ToList();
+                DocumentId = request.DocumentId
+            }, _dbSession.Transaction);
 
-        var failedRows = await _dbSession.Connection.QueryAsync<int>(UPDATE_BALANCE_SQL
-        , new
-        {
-            Lines = JsonSerializer.Serialize(updateBalances)
-        }
-        , _dbSession.Transaction);
+            var balanceLines = new object();
 
-        if (failedRows.Any())
-        {
-            throw new BusinessException("insufficient_inventory");
+            if (oldStatus == DocumentStatus.DRAFT.ToString())
+            {
+                balanceLines = request.Lines.Select(p => new
+                {
+                    warehouse_id = warehouseId,
+                    product_id = p.ProductId,
+                    unit_id = p.UnitId,
+                    quantity = p.ActualQuantity,
+                    amount = p.ActualQuantity * p.UnitPrice
+                })
+                .ToList();
+            }
+            else
+            {
+                balanceLines = deleteRows.Select(p => new
+                {
+                    warehouse_id = warehouseId,
+                    product_id = p.ProductId,
+                    unit_id = p.UnitId,
+                    quantity = -p.ActualQuantity,
+                    amount = -p.Amount
+                })
+                .Union(upsertRows.LeftJoin(dbLines
+                    , p => (p.ProductId, p.UnitId)
+                    , p => (p.ProductId, p.UnitId)
+                    , (req, db) => new
+                    {
+                        warehouse_id = warehouseId,
+                        product_id = req.ProductId,
+                        unit_id = req.UnitId,
+                        quantity = req.ActualQuantity - (db == null ? 0 : db.ActualQuantity),
+                        amount = req.ActualQuantity * req.UnitPrice - (db == null ? 0 : db.ActualQuantity * db.UnitPrice)
+                    }))
+                .ToList();
+            }
+
+            int failedCount = await _dbSession.Connection.ExecuteScalarAsync<int>(UPDATE_BALANCE_SQL
+                , new
+                {
+                    Lines = JsonSerializer.Serialize(balanceLines)
+                }, _dbSession.Transaction);
+
+            if (failedCount > 0)
+            {
+                throw new BusinessException("insufficient_inventory");
+            }
         }
     }
 }

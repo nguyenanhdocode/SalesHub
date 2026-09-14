@@ -64,22 +64,22 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
     const string UPDATE_BALANCE_SQL = @"
     WITH lines AS (
         SELECT *
-        FROM jsonb_to_record(@Lines::jsonb) AS x (
-            WarehouseId int,
-            ProductId int,
-            UnitId int,
-            Quantity int,
-            Amount numeric
+        FROM jsonb_to_recordset(@Lines::jsonb) AS x (
+            warehouse_id int,
+            product_id int,
+            unit_id int,
+            quantity int,
+            amount numeric
         )
-    )
-    , updated AS (
-        UPDATE inventory_balances AS target
-        SET quantity = quantity - x.Quantity
-            , amount = amount - x.Amount
-        WHERE target.warehouse_id = lines.WarehouseId 
-            AND target.product_id = lines.product_id
-            AND target.unit_id = lines.unit_id
-        RETURNING target.warehouse_id, target.product_id, target.quantity
+    ),
+    updated AS (
+        UPDATE inventory_balances AS ib
+        SET quantity = ib.quantity - lines.quantity
+        , amount = ib.amount - lines.amount
+        FROM lines
+        WHERE lines.warehouse_id = ib.warehouse_id AND lines.product_id = ib.product_id
+        AND lines.unit_id = ib.unit_id
+        RETURNING ib.warehouse_id, ib.product_id, ib.unit_id, ib.quantity
     )
     SELECT DISTINCT lines.product_id
     FROM lines
@@ -103,9 +103,15 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
         }
 
         var id = Guid.CreateVersion7();
-        var docNo = await _docNoService.GetNextDocumentNo("GI"
-            , request.DocumentDate.Year
-            , request.DocumentDate.Month);
+
+        string docNo = request.DocumentNo;
+
+        if (string.IsNullOrEmpty(docNo))
+        {
+            docNo = await _docNoService.GetNextDocumentNo("GI"
+                , request.DocumentDate.Year
+                , request.DocumentDate.Month);   
+        }
 
         await _dbSession.Connection.ExecuteAsync(DocumentSqls.INSERT_DOCUMENT_SQL, new CreateDocumentParams
         {
@@ -134,7 +140,7 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
             UnitId = p.UnitId,
             DocumentQuantity = p.DocumentQuantity,
             ActualQuantity = p.ActualQuantity,
-            Amount = p.Amount,
+            Amount = p.ActualQuantity * p.UnitPrice,
             SortOrder = p.SortOrder,
             Note = p.Note,
             UnitPrice = p.UnitPrice
@@ -146,15 +152,18 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
         {
             var updateBalances = request.Lines.Select(p => new
             {
-                WarehouseId = request.WarehouseId,
-                ProductId = p.ProductId,
-                UnitId = p.UnitId,
-                ActualQuantity = p.ActualQuantity,
-                Amount = p.Amount
+                warehouse_id = request.WarehouseId,
+                product_id = p.ProductId,
+                unit_id = p.UnitId,
+                quantity = p.ActualQuantity,
+                amount = p.ActualQuantity * p.UnitPrice,
             });
 
             var failedRows = await _dbSession.Connection.QueryAsync<int>(UPDATE_BALANCE_SQL
-                , updateBalances
+                , new
+                {
+                    Lines = JsonSerializer.Serialize(updateBalances)
+                }
                 , _dbSession.Transaction);
 
             if (failedRows.Any())

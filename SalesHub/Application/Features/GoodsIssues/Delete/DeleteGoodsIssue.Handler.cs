@@ -38,23 +38,12 @@ public class DeleteGoodsIssueHandle : IRequestHandler<DeleteGoodsIssueCommand>
         INNER JOIN goods_issues ON goods_issues.document_id = goods_issue_lines.document_id
         WHERE goods_issue_lines.document_id = @DocumentId 
     )
-    , updated AS (
-        UPDATE inventory_balances AS ib
-        SET quantity = quantity + lines.actual_quantity
-        , amount = amount + lines.amount
-        FROM lines 
-        WHERE ib.warehouse_id = lines.warehouse_id AND ib.product_id = lines.product_id
-        AND ib.unit_id = lines.unit_id AND ib.quantity >= lines.actual_quantity
-        AND ib.amount >= lines.amount
-        RETURNING ib.warehouse_id, ib.product_id, ib.unit_id
-    )
-    SELECT DISTINCT
-        lines.product_id
-    FROM lines
-    LEFT JOIN updated ON updated.warehouse_id = lines.warehouse_id
-        AND updated.product_id = lines.product_id
-        AND updated.uint_id = lines.unit_id
-    WHERE updated.product_id IS NULL
+    UPDATE inventory_balances AS ib
+    SET quantity = ib.quantity + lines.actual_quantity
+    , amount = ib.amount + lines.amount
+    FROM lines 
+    WHERE ib.warehouse_id = lines.warehouse_id AND ib.product_id = lines.product_id
+    AND ib.unit_id = lines.unit_id
     ";
 
     const string GET_STATUS_SQL = @"
@@ -76,15 +65,10 @@ public class DeleteGoodsIssueHandle : IRequestHandler<DeleteGoodsIssueCommand>
 
         if (status == DocumentStatus.POSTED.ToString())
         {
-            var failedRows = await _dbSession.Connection.QueryAsync<object>(UPDATE_BALANCES_SQL, new
+            await _dbSession.Connection.ExecuteAsync(UPDATE_BALANCES_SQL, new
             {
                 DocumentId = request.DocumentId
             }, _dbSession.Transaction);
-
-            if (failedRows.Any())
-            {
-                throw new BusinessException("insufficient_inventory");
-            }
         }
     }
 }
