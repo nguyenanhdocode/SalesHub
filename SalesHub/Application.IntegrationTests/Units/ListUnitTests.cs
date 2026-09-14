@@ -110,7 +110,7 @@ public class ListUnitTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
         var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListUnitQuery { }, CancellationToken.None);
+        var res = await sender.Send(new ListUnitQuery { PageSize = int.MaxValue }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(_unitIds.Count, count);

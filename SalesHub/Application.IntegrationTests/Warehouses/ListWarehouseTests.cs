@@ -129,7 +129,7 @@ public class ListWarehouseTests : IClassFixture<ApplicationFixture>, IAsyncLifet
         var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListWarehouseQuery { }, CancellationToken.None);
+        var res = await sender.Send(new ListWarehouseQuery { PageSize = int.MaxValue }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(_warehouseIds.Count, count);
@@ -209,7 +209,12 @@ public class ListWarehouseTests : IClassFixture<ApplicationFixture>, IAsyncLifet
         var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListWarehouseQuery { Active = false }, CancellationToken.None);
+        var res = await sender.Send(new ListWarehouseQuery
+        { 
+            Active = false,
+            PageSize = int.MaxValue 
+        }
+        , CancellationToken.None);
 
         Assert.Single(res.Rows, p => p.Code == $"{_prefix}-kho-huy-govap");
     }
@@ -220,7 +225,11 @@ public class ListWarehouseTests : IClassFixture<ApplicationFixture>, IAsyncLifet
         var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
         var dbSession = _scope.ServiceProvider.GetRequiredService<DbSession>();
 
-        var res = await sender.Send(new ListWarehouseQuery { Active = true }, CancellationToken.None);
+        var res = await sender.Send(new ListWarehouseQuery 
+        { 
+            Active = true,
+            PageSize = int.MaxValue
+        }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(4, count);

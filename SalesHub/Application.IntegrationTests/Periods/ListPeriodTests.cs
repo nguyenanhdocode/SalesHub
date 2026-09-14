@@ -105,7 +105,7 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     {
         var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
-        var res = await sender.Send(new ListPeriodQuery() { }, CancellationToken.None);
+        var res = await sender.Send(new ListPeriodQuery() { PageSize = int.MaxValue }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(4, count);
@@ -213,7 +213,8 @@ public class ListPeriodTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
 
         var res = await sender.Send(new ListPeriodQuery()
         {
-            IsClosed = false
+            IsClosed = false,
+            PageSize = int.MaxValue
         }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 

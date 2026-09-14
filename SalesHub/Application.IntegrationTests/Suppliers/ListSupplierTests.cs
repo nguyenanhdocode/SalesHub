@@ -140,7 +140,7 @@ public class ListSupplierTests : IClassFixture<ApplicationFixture>, IAsyncLifeti
     {
         var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
-        var res = await sender.Send(new ListSupplierQuery(), CancellationToken.None);
+        var res = await sender.Send(new ListSupplierQuery { PageSize = int.MaxValue }, CancellationToken.None);
         int count = res.Rows.Where(p => p.Code.StartsWith(_prefix)).Count();
 
         Assert.Equal(6, count);

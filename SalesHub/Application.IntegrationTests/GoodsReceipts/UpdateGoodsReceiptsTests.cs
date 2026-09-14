@@ -219,7 +219,7 @@ public class UpdateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
                         UnitId = baseUnitId
                     },
                     // Product 2 -> Delete
-                    // Product 3 -> Update
+                    // Product 3 -> Insert
                     new Features.GoodsReceipts.Update.GoodsReceiptLineInput
                     {
                         ProductId = productId3,

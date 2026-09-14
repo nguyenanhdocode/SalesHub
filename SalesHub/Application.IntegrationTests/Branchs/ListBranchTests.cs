@@ -102,7 +102,7 @@ public class ListBranchTests : IClassFixture<ApplicationFixture>, IAsyncLifetime
     {
         var sender = _scope.ServiceProvider.GetRequiredService<ISender>();
 
-        var res = await sender.Send(new ListBranchQuery(), CancellationToken.None);
+        var res = await sender.Send(new ListBranchQuery { PageSize = int.MaxValue }, CancellationToken.None);
         int count = res.Rows.Count(p => p.Code.StartsWith(_prefix));
 
         Assert.Equal(4, count);
