@@ -1,6 +1,6 @@
 namespace Application.Features.InventoryOpenings.Update;
 
-public class InventoryOpeningLineInput
+public class UpdateInventoryOpeningLineInput
 {
     public int ProductId {get;set;}
     public int UnitId {get;set;}

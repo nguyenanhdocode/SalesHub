@@ -3,6 +3,7 @@ using System.Text;
 using Application.Database;
 using Application.Interfaces.Database;
 using Application.Models.Common;
+using Application.Shared;
 using Dapper;
 using MediatR;
 
@@ -46,7 +47,13 @@ public class ListInventoryOpeningHandler : IRequestHandler<ListInventoryOpeningQ
     ";
 
     const string COUNTER_SQL = @"
-    SELECT COUNT(1) FROM inventory_openings WHERE 1=1
+    SELECT COUNT(1)
+    FROM inventory_openings
+    INNER JOIN warehouses ON warehouses.warehouse_id = inventory_openings.warehouse_id
+    INNER JOIN branchs ON branchs.branch_id = warehouses.branch_id
+    INNER JOIN periods ON periods.period_id = inventory_openings.period_id
+    INNER JOIN users AS users_created ON users_created.user_id = inventory_openings.created_by
+    WHERE 1=1
     ";
 
     public async Task<PagedResult<InventoryOpeningListItem>> Handle(ListInventoryOpeningQuery request, CancellationToken cancellationToken)
@@ -89,16 +96,18 @@ public class ListInventoryOpeningHandler : IRequestHandler<ListInventoryOpeningQ
         counterQuery.AppendLine(filterBuilder.ToString());
 
         int totalRows = await _dbSession.Connection.ExecuteScalarAsync<int>(counterQuery.ToString(), parameters);
-        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)request.PageSize));
+        int pageSize = request.PageSize > 0 ? request.PageSize : Constants.PAGE_SIZE;
+        int totalPages = Convert.ToInt32(Math.Ceiling(totalRows / (double)pageSize));
+        int pageNum = (request.PageNum > 0 && request.PageNum <= totalPages) ? request.PageNum : 1;
 
         var dataQuery = new StringBuilder(BASE_SQL);
         dataQuery.AppendLine(filterBuilder.ToString());
         dataQuery.AppendLine("ORDER BY CreatedAt OFFSET @Offset LIMIT @PageSize");
-        parameters.Add("Offset", (request.PageNum - 1) * request.PageSize);
-        parameters.Add("PageSize", request.PageSize);
+        parameters.Add("Offset", (pageNum - 1) * pageSize);
+        parameters.Add("PageSize", pageSize);
 
         var data = await _dbSession.Connection.QueryAsync<InventoryOpeningListItem>(dataQuery.ToString(), parameters);
 
-        return new PagedResult<InventoryOpeningListItem>(data, totalPages, request.PageNum, request.PageSize);
+        return new PagedResult<InventoryOpeningListItem>(data, totalPages, pageNum, pageSize);
     }
 }

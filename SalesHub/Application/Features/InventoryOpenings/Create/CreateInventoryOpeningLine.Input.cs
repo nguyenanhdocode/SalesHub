@@ -1,6 +1,6 @@
 namespace Application.Features.InventoryOpenings.Create;
 
-public class InventoryOpeningLineInput
+public class CreateInventoryOpeningLineInput
 {
     public int ProductId {get;set;}
     public int UnitId {get;set;}

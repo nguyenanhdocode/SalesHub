@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Application.Database;
 using Application.Exceptions;
 using Application.Interfaces.Security;
@@ -14,19 +15,24 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
     private readonly DbSession _dbSession;
     private readonly ICurrentUser _currentUser;
     private readonly DocumentNoService _docNoService;
+    private readonly QueryService _queryService;
 
     public UpdateInventoryOpeningHandler(DbSession dbSession
         , ICurrentUser currentUser
-        , DocumentNoService docNoService)
+        , DocumentNoService docNoService
+        , QueryService queryService)
     {
         _dbSession = dbSession;
         _currentUser = currentUser;
         _docNoService = docNoService;
+        _queryService = queryService;
     }
 
     const string UPDATE_MASTER_SQL = @"
     UPDATE inventory_openings
     SET note = @Note
+    , updated_by = @UpdatedBy
+    , updated_at = CURRENT_TIMESTAMP
     WHERE document_id = @DocumentId;
     ";
 
@@ -59,9 +65,9 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
         , @SortOrder
     )
     ON CONFLICT (document_id, product_id, unit_id)
-    UPDATE SET 
-          quantity = EXECLUDED.quantity
-        , amount = EXECLUDED.amount;
+    DO UPDATE SET 
+          quantity = EXCLUDED.quantity
+        , amount = EXCLUDED.amount;
     ";
 
     const string DELETE_LINE_SQL = @"
@@ -69,19 +75,18 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
     WHERE document_id = @DocumentId AND product_id = @ProductId AND unit_id = @UnitId
     ";
 
-    const string CHECK_HAS_TRANSACTION_SQL = @"
-    SELECT EXISTS(SELECT 1
-    FROM inventory_openings 
-    INNER JOIN documents ON documents.period_id = inventory_openings.period_id
-    WHERE inventory_openings.document_id = @DocumentId);
-    ";
-
-    const string GET_WAREHOUSE_ID_SQL = @"
-    SELECT warehouse_id FROM inventory_openings WHERE document_id = @DocumentId;
-    ";
-
-    const string UPSERT_INVENTORY_BALANCE_SQL = @"
-    INSERT INTO inventory_balances
+    const string UPSERT_BALANCES_SQL = @"
+    WITH lines AS (
+        SELECT *
+        FROM jsonb_to_recordset(@Lines::jsonb) AS x (
+            warehouse_id int,
+            product_id int,
+            unit_id int,
+            quantity int,
+            amount numeric
+        )
+    )
+    INSERT INTO inventory_balances AS ib
     (
           warehouse_id
         , product_id
@@ -89,36 +94,18 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
         , quantity
         , amount
     )
-    VALUES
-    (
-          @WarehouseId
-        , @ProductId
-        , @UnitId
-        , @Quantity
-        , @Amount
-    )
+    SELECT * FROM lines
     ON CONFLICT (warehouse_id, product_id, unit_id)
-    DO UPDATE SET
-          quantity = EXCLUDED.quantity
-        , amount = EXCLUDED.amount
+    DO UPDATE SET quantity = EXCLUDED.quantity, amount = EXCLUDED.amount;
     ";
 
     public async Task Handle(UpdateInventoryOpeningCommand request, CancellationToken cancellationToken)
     {
-        bool hasDocs = await _dbSession.Connection.ExecuteScalarAsync<bool>(CHECK_HAS_TRANSACTION_SQL, new
-        {
-            DocumentId = request.DocumentId
-        }, _dbSession.Transaction);
-
-        if (hasDocs)
-        {
-            throw new BusinessException("period_has_transactions");
-        }
-
         await _dbSession.Connection.ExecuteAsync(UPDATE_MASTER_SQL, new
         {
             DocumentId = request.DocumentId,
-            Note = request.Note
+            Note = request.Note,
+            UpdatedBy = _currentUser.UserId
         }, _dbSession.Transaction);
 
         var dbLines = await _dbSession.Connection.QueryAsync<InventoryOpeningLineRow>(GET_LINES_SQL, new
@@ -129,7 +116,15 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
         var deleteLines = dbLines.ExceptBy(request.Lines.Select(p => (p.ProductId, p.UnitId))
             , p => (p.ProductId, p.UnitId)).ToList();
 
-        var upsertLines = request.Lines;
+        var upsertLines = request.Lines.Select(p => new
+        {
+            DocumentId = request.DocumentId,
+            ProductId = p.ProductId,
+            UnitId = p.UnitId,
+            Quantity = p.Quantity,
+            Amount = p.Amount,
+            SortOrder = p.SortOrder
+        });
 
         if (deleteLines.Any())
         {
@@ -141,21 +136,26 @@ public class UpdateInventoryOpeningHandler : IRequestHandler<UpdateInventoryOpen
             await _dbSession.Connection.ExecuteAsync(UPSERT_LINE_SQL, upsertLines, _dbSession.Transaction);
         }
 
-        int warehouseId = await _dbSession.Connection.QuerySingleAsync<int>(GET_WAREHOUSE_ID_SQL, new
-        {
-            DocumentId = request.DocumentId
-        }, _dbSession.Transaction);
+        int warehouseId = await _queryService.GetColumnValue<int>("inventory_openings", "document_id"
+            , request.DocumentId.ToString(), "warehouse_id");
 
-        var balances = request.Lines.Select(p => new
+        if (request.WriteToBalances)
         {
-            WarehouseId = warehouseId,
-            ProductId = p.ProductId,
-            UnitId = p.UnitId,
-            Quantity = p.Quantity,
-            Amount = p.Amount,
-        });
+            var balances = request.Lines.Select(p => new
+            {
+                warehouse_id = warehouseId,
+                product_id = p.ProductId,
+                unit_id = p.UnitId,
+                quantity = p.Quantity,
+                amount = p.Amount,
+            });
 
-        await _dbSession.Connection.ExecuteAsync(UPSERT_INVENTORY_BALANCE_SQL
-            , balances, _dbSession.Transaction);
+            await _dbSession.Connection.ExecuteAsync(UPSERT_BALANCES_SQL
+            , new
+            {
+                Lines = JsonSerializer.Serialize(balances)
+            }
+            , _dbSession.Transaction);
+        }
     }
 }

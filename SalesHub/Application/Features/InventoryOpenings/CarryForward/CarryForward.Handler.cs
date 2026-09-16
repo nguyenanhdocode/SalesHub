@@ -1,6 +1,7 @@
 using Application.Database;
 using Application.Exceptions;
 using Application.Interfaces.Security;
+using Application.Models.Documents;
 using Application.Services;
 using Dapper;
 using Infrastructure.Security;
@@ -8,7 +9,7 @@ using MediatR;
 
 namespace Application.Features.InventoryOpenings.CarryForward;
 
-public class CarryForwardHandler : IRequestHandler<CarryForwardCommand>
+public class CarryForwardHandler : IRequestHandler<CarryForwardCommand, IEnumerable<CreateDocumentResponse>>
 {
     private readonly DbSession _dbSession;
     private readonly ICurrentUser _currentUser;
@@ -57,7 +58,7 @@ public class CarryForwardHandler : IRequestHandler<CarryForwardCommand>
     WHERE warehouse_id = @WarehouseId;
     ";
 
-    public async Task Handle(CarryForwardCommand request, CancellationToken cancellationToken)
+    public async Task<IEnumerable<CreateDocumentResponse>> Handle(CarryForwardCommand request, CancellationToken cancellationToken)
     {
         bool isSrcPeriodClosed = await _dbSession.Connection.QuerySingleOrDefaultAsync<bool>(CHECK_PERIOD_SQL, new
         {
@@ -78,6 +79,8 @@ public class CarryForwardHandler : IRequestHandler<CarryForwardCommand>
         {
             throw new BusinessException("dst_period_closed");
         }
+
+        var res = new List<CreateDocumentResponse>();
 
         foreach (int warehouseId in request.WarehouseIds)
         {
@@ -104,6 +107,14 @@ public class CarryForwardHandler : IRequestHandler<CarryForwardCommand>
                 DocumentId = id,
                 WarehouseId = warehouseId
             }, _dbSession.Transaction);
+
+            res.Add(new CreateDocumentResponse
+            {
+                DocumentId = id,
+                DocumentNo = docNo
+            });
         }
+
+        return res;
     }
 }

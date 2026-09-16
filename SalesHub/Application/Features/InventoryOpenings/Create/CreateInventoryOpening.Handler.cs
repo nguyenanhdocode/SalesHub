@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Application.Database;
 using Application.Interfaces.Security;
 using Application.Models.Documents;
@@ -32,14 +33,17 @@ public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpen
         , warehouse_id
         , period_id
         , created_by
-        , note)
+        , note
+        , automated_generate
+    )
 	VALUES (
           @DocumentId
         , @DocumentNo
         , @WarehouseId
         , @PeriodId
         , @CreatedBy
-        , @Note);
+        , @Note
+        , false);
     ";
 
     const string INSERT_LINE_SQL = @"
@@ -61,13 +65,42 @@ public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpen
     );
     ";
 
+    const string UPSERT_BALANCES_SQL = @"
+    WITH lines AS (
+        SELECT *
+        FROM jsonb_to_recordset(@Lines::jsonb) AS x (
+            warehouse_id int,
+            product_id int,
+            unit_id int,
+            quantity int,
+            amount numeric
+        )
+    )
+    INSERT INTO inventory_balances AS ib
+    (
+          warehouse_id
+        , product_id
+        , unit_id
+        , quantity
+        , amount
+    )
+    SELECT * FROM lines
+    ON CONFLICT (warehouse_id, product_id, unit_id)
+    DO UPDATE SET quantity = EXCLUDED.quantity, amount = EXCLUDED.amount;
+    ";
+
     public async Task<CreateDocumentResponse> Handle(CreateInventoryOpeningCommand request, CancellationToken cancellationToken)
     {
         var id = Guid.CreateVersion7();
 
-        var docNo = await _docNoService.GetNextDocumentNo("IO"
+        string docNo = request.DocumentNo ?? "";
+
+        if (string.IsNullOrEmpty(docNo))
+        {
+            docNo = await _docNoService.GetNextDocumentNo("IO"
             , DateTime.Now.Year
             , DateTime.Now.Month);
+        }
 
         await _dbSession.Connection.ExecuteAsync(INSERT_MASTER_SQL, new
         {
@@ -92,17 +125,24 @@ public class CreateInventoryOpeningHandler : IRequestHandler<CreateInventoryOpen
 
         await _dbSession.Connection.ExecuteAsync(INSERT_LINE_SQL, lines, _dbSession.Transaction);
 
-        var balances = request.Lines.Select(p => new InventoryBalanceParams
+        if (request.WriteToBalances)
         {
-            WarehouseId = request.WarehouseId,
-            ProductId = p.ProductId,
-            UnitId = p.UnitId,
-            Quantity = p.Quantity,
-            Amount = p.Amount,
-        });
+            var balances = request.Lines.Select(p => new
+            {
+                warehouse_id = request.WarehouseId,
+                product_id = p.ProductId,
+                unit_id = p.UnitId,
+                quantity = p.Quantity,
+                amount = p.Amount,
+            });
 
-        await _dbSession.Connection.ExecuteAsync(InventoryBalanceSqls.UPSERT_INVENTORY_BALANCE_SQL
-            , balances, _dbSession.Transaction);
+            await _dbSession.Connection.ExecuteAsync(UPSERT_BALANCES_SQL
+            , new
+            {
+                Lines = JsonSerializer.Serialize(balances)
+            }
+            , _dbSession.Transaction);
+        }
 
         return new CreateDocumentResponse
         {

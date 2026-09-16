@@ -2,9 +2,9 @@ using FluentValidation;
 
 namespace Application.Features.InventoryOpenings.Create;
 
-public class InventoryOpeningLineValidator : AbstractValidator<InventoryOpeningLineInput>
+public class CreateInventoryOpeningLineValidator : AbstractValidator<CreateInventoryOpeningLineInput>
 {
-    public InventoryOpeningLineValidator()
+    public CreateInventoryOpeningLineValidator()
     {
         RuleFor(p => p.ProductId).NotNull();
         RuleFor(p => p.UnitId).NotNull();

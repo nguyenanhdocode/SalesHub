@@ -27,4 +27,15 @@ public class QueryService
 
         return isClosed;
     }
+
+    public async Task<T?> GetColumnValue<T>(string tableName, string pkName, string pkValue, string selectColumn)
+    {
+        string sql = $"SELECT {selectColumn} FROM {tableName} WHERE CAST({pkName} AS TEXT) = @Value";
+        var res = await _dbSession.Connection.QuerySingleOrDefaultAsync<T>(sql, new
+        {
+            Value = pkValue
+        });
+
+        return res;
+    }
 }

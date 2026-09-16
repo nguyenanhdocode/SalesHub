@@ -9,10 +9,12 @@ namespace Application.Features.InventoryOpenings.Create;
 public class CreateInventoryOpeningCommand : IRequest<CreateDocumentResponse>, ITransactionalRequest
     , ICheckPeriodForCreateRequest
 {
+    public string? DocumentNo {get;set;}
     public int WarehouseId {get;set;}
     public int PeriodId {get;set;}
     public string? Note {get;set;}
-    public List<InventoryOpeningLineInput> Lines {get;set;} = [];
+    public bool WriteToBalances {get;set;}
+    public List<CreateInventoryOpeningLineInput> Lines {get;set;} = [];
 
     IsolationLevel ITransactionalRequest.IsolationLevel => IsolationLevel.ReadCommitted;
 }
