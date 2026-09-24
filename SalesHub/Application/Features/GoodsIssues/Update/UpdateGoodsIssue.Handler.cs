@@ -19,14 +19,17 @@ public class UpdateGoodsIssueHandler : IRequestHandler<UpdateGoodsIssueCommand>
     private readonly DbSession _dbSession;
     private readonly ICurrentUser _currentUser;
     private readonly DocumentNoService _docNoService;
+    private readonly QueryService _queryService;
 
     public UpdateGoodsIssueHandler(DbSession dbSession
         , ICurrentUser currentUser
-        , DocumentNoService docNoService)
+        , DocumentNoService docNoService
+        , QueryService queryService)
     {
         _dbSession = dbSession;
         _currentUser = currentUser;
         _docNoService = docNoService;
+        _queryService = queryService;
     }
 
     const string GET_OLD_STATUS = @"
@@ -106,7 +109,7 @@ public class UpdateGoodsIssueHandler : IRequestHandler<UpdateGoodsIssueCommand>
     updated AS (
         UPDATE inventory_balances AS ib
         SET quantity = ib.quantity - lines.quantity
-        , amount = ib.amount - lines.amount
+        --, amount = ib.amount - lines.amount
         FROM lines
         WHERE lines.warehouse_id = ib.warehouse_id AND lines.product_id = ib.product_id
         AND lines.unit_id = ib.unit_id
@@ -128,9 +131,11 @@ public class UpdateGoodsIssueHandler : IRequestHandler<UpdateGoodsIssueCommand>
 
     public async Task Handle(UpdateGoodsIssueCommand request, CancellationToken cancellationToken)
     {
+        int periodId = await _queryService.GetColumnValue<int>("documents", "document_id", request.DocumentId.ToString(), "period_id");
+
         bool isValidPostingDate = await _dbSession.Connection.ExecuteScalarAsync<bool>(DocumentSqls.CHECK_POSTINGDATE_SQL, new
         {
-            PeriodId = request.PeriodId,
+            PeriodId = periodId,
             PostingDate = request.PostingDate
         }, _dbSession.Transaction);
 
@@ -153,7 +158,6 @@ public class UpdateGoodsIssueHandler : IRequestHandler<UpdateGoodsIssueCommand>
             DocumentId = request.DocumentId,
             PostingDate = request.PostingDate,
             DocumentDate = request.DocumentDate,
-            PeriodId = request.PeriodId,
             UpdatedBy = _currentUser.UserId,
             Note = request.Note,
             Status = newStatus

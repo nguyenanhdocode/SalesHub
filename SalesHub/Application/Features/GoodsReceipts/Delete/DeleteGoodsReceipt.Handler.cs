@@ -46,7 +46,6 @@ public class DeleteGoodsReceiptHandler : IRequestHandler<DeleteGoodsReceiptComma
     , updated AS (
         UPDATE inventory_balances AS ib
         SET quantity = ib.quantity - lines.actual_quantity
-        , amount = ib.amount - lines.amount
         FROM lines 
         WHERE ib.warehouse_id = lines.warehouse_id AND ib.product_id = lines.product_id
         AND ib.unit_id = lines.unit_id AND ib.quantity >= lines.actual_quantity

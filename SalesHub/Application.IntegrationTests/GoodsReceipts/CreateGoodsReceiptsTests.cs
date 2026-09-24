@@ -479,7 +479,7 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
                 ProductId = command.Lines[0].ProductId,
                 UnitId = command.Lines[0].UnitId,
                 Quantity = command.Lines[0].ActualQuantity,
-                Amount = command.Lines[0].ActualQuantity * command.Lines[0].UnitPrice * command.Lines[0].VatRate
+                // Amount = command.Lines[0].ActualQuantity * command.Lines[0].UnitPrice * command.Lines[0].VatRate
             });
 
             Assert.Equal(1, balanceLine1Count);
@@ -492,7 +492,7 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
                 ProductId = command.Lines[1].ProductId,
                 UnitId = command.Lines[1].UnitId,
                 Quantity = command.Lines[1].ActualQuantity,
-                Amount = command.Lines[1].ActualQuantity * command.Lines[1].UnitPrice * command.Lines[1].VatRate
+                // Amount = command.Lines[1].ActualQuantity * command.Lines[1].UnitPrice * command.Lines[1].VatRate
             });
 
             Assert.Equal(1, balanceLine2Count);
@@ -627,8 +627,8 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
                 ProductId = command1.Lines[0].ProductId,
                 UnitId = command1.Lines[0].UnitId,
                 Quantity = command1.Lines[0].ActualQuantity + command2.Lines[0].ActualQuantity,
-                Amount = command1.Lines[0].ActualQuantity * command1.Lines[0].UnitPrice * command1.Lines[0].VatRate
-                + command2.Lines[0].ActualQuantity * command2.Lines[0].UnitPrice * command2.Lines[0].VatRate
+                // Amount = command1.Lines[0].ActualQuantity * command1.Lines[0].UnitPrice * command1.Lines[0].VatRate
+                // + command2.Lines[0].ActualQuantity * command2.Lines[0].UnitPrice * command2.Lines[0].VatRate
             });
 
             Assert.Equal(1, product1BalanceCount);
@@ -640,7 +640,7 @@ public class CreateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
                 ProductId = command1.Lines[1].ProductId,
                 UnitId = command1.Lines[1].UnitId,
                 Quantity = command1.Lines[1].ActualQuantity,
-                Amount = command1.Lines[1].ActualQuantity * command1.Lines[1].UnitPrice * command1.Lines[1].VatRate
+                // Amount = command1.Lines[1].ActualQuantity * command1.Lines[1].UnitPrice * command1.Lines[1].VatRate
             });
 
             Assert.Equal(1, product2BalanceCount);

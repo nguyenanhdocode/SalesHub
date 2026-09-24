@@ -14,9 +14,6 @@ public class UpdateDocumentValidator<T> : AbstractValidator<T> where T: UpdateDo
             .NotNull()
             .NotEmpty();
 
-        RuleFor(p => p.PeriodId)
-            .NotNull();
-
         RuleFor(p => p.Note)
             .MaximumLength(1000);
 

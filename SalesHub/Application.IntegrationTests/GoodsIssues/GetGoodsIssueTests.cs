@@ -95,7 +95,6 @@ public class GetGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLifet
         var updateCommand = new UpdateGoodsIssueCommand
         {
             DocumentDate = DateTime.UtcNow,
-            PeriodId = periodId,
             Note = "Note",
             PostingDate = DateTime.UtcNow.AddDays(1),
             Reason = "Lý do",
@@ -172,11 +171,6 @@ public class GetGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLifet
             Assert.Equal(updateCommand.PostingDate.Year, res.PostingDate.Year);
             Assert.Equal(updateCommand.PostingDate.Month, res.PostingDate.Month);
             Assert.Equal(updateCommand.PostingDate.Day, res.PostingDate.Day);
-
-            int actualPeriodId = await dbSession.Connection.ExecuteScalarAsync<int>(@"
-            SELECT period_id FROM periods WHERE code = @Code AND name = @Name
-            ", new { Code = res.PeriodCode,  Name = res.PeriodName});
-            Assert.Equal(updateCommand.PeriodId, actualPeriodId);
 
             Assert.Equal(DateTime.UtcNow.Year, res.CreatedAt.Year);
             Assert.Equal(DateTime.UtcNow.Month, res.CreatedAt.Month);

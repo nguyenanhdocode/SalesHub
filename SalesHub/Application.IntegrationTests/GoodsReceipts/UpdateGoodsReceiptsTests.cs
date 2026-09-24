@@ -99,7 +99,6 @@ public class UpdateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
         {
             PostingDate = DateTime.UtcNow,
             DocumentDate = DateTime.UtcNow,
-            PeriodId = 1,
             Note = "Note",
             ShipperName = "Nguyễn Văn A",
             Status = DocumentStatus.DRAFT,
@@ -199,7 +198,6 @@ public class UpdateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
             {
                 DocumentId = inserted.DocumentId,
                 DocumentDate = DateTime.UtcNow.AddDays(1),
-                PeriodId = periodId,
                 Note = "Note updated",
                 PostingDate = DateTime.UtcNow.AddDays(1),
                 ShipperName = "Nguyễn Văn AB",
@@ -303,7 +301,7 @@ public class UpdateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
                 ProductId = updateCommand.Lines[0].ProductId,
                 UnitId = updateCommand.Lines[0].UnitId,
                 Quantity = updateCommand.Lines[0].ActualQuantity,
-                Amount = updateCommand.Lines[0].ActualQuantity * updateCommand.Lines[0].UnitPrice * updateCommand.Lines[0].VatRate
+                // Amount = updateCommand.Lines[0].ActualQuantity * updateCommand.Lines[0].UnitPrice * updateCommand.Lines[0].VatRate
             });
 
             Assert.Equal(1, product1BalanceCount);
@@ -442,7 +440,6 @@ public class UpdateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
             {
                 DocumentId = inserted.DocumentId,
                 DocumentDate = DateTime.UtcNow.AddDays(1),
-                PeriodId = periodId,
                 Note = "Note updated",
                 PostingDate = DateTime.UtcNow.AddDays(1),
                 ShipperName = "Nguyễn Văn AB",
@@ -588,7 +585,6 @@ public class UpdateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
             {
                 DocumentId = inserted.DocumentId,
                 DocumentDate = DateTime.UtcNow.AddDays(1),
-                PeriodId = periodId,
                 Note = "Note updated",
                 PostingDate = DateTime.UtcNow.AddDays(1),
                 ShipperName = "Nguyễn Văn AB",
@@ -709,7 +705,6 @@ public class UpdateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
             {
                 DocumentId = inserted.DocumentId,
                 DocumentDate = DateTime.UtcNow,
-                PeriodId = periodId,
                 Note = "Note",
                 PostingDate = DateTime.UtcNow.AddDays(1),
                 ShipperName = "Nguyễn Văn A",
@@ -853,7 +848,6 @@ public class UpdateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
             var updateCommand = new UpdateGoodsReceiptCommand
             {
                 DocumentDate = DateTime.UtcNow,
-                PeriodId = periodId,
                 Note = "Note",
                 PostingDate = DateTime.UtcNow.AddYears(1),
                 ShipperName = "Nguyễn Văn A",
@@ -966,7 +960,6 @@ public class UpdateGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
             {
                 DocumentId = inserted.DocumentId,
                 DocumentDate = DateTime.UtcNow,
-                PeriodId = periodId,
                 Note = "Note",
                 PostingDate = DateTime.UtcNow,
                 ShipperName = "Nguyễn Văn A",

@@ -470,7 +470,7 @@ public class CreateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
             string testBalanceSql = @"
             SELECT COUNT(1) FROM inventory_balances
             WHERE warehouse_id = @WarehouseId AND product_id = @ProductId AND unit_id = @UnitId
-            AND quantity = @Quantity AND amount = @Amount;
+            AND quantity = @Quantity;
             ";
 
             int line1BalanceCount = await dbSession.Connection.ExecuteScalarAsync<int>(testBalanceSql, new
@@ -479,7 +479,7 @@ public class CreateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
                 ProductId = command.Lines[0].ProductId,
                 UnitId = command.Lines[0].UnitId,
                 Quantity = 0,
-                Amount = 0,
+                // Amount = 0,
             });
 
             Assert.Equal(1, line1BalanceCount);
@@ -490,7 +490,7 @@ public class CreateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
                 ProductId = command.Lines[1].ProductId,
                 UnitId = command.Lines[1].UnitId,
                 Quantity = 0,
-                Amount = 0,
+                // Amount = 0,
             });
 
             Assert.Equal(1, line2BalanceCount);

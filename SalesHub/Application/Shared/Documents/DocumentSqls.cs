@@ -31,7 +31,6 @@ public class DocumentSqls
     UPDATE public.documents
 	SET posting_date=@PostingDate
     , document_date=@DocumentDate
-    , period_id=@PeriodId
     , updated_at=CURRENT_TIMESTAMP
     , updated_by=@UpdatedBy
     , note=@Note

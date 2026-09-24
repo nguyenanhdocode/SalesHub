@@ -107,7 +107,7 @@ public class DeleteGoodsReceiptsTests : IClassFixture<ApplicationFixture>, IAsyn
             string balanceLineSql = @"
             SELECT COUNT(1) FROM inventory_balances
             WHERE warehouse_id = @WarehouseId AND product_id = @ProductId
-            AND unit_id = @UnitId AND quantity = @Quantity AND amount = @Amount
+            AND unit_id = @UnitId AND quantity = @Quantity
             ";
 
             // Check balance of line 1 -> should be recorded

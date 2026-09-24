@@ -74,14 +74,12 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
         , product_id
         , unit_id
         , quantity
-        , amount
     )
 	VALUES (
           @WarehouseId
         , @ProductId
         , @UnitId
         , @Quantity
-        , @Amount
     )
     ON CONFLICT (warehouse_id, product_id, unit_id)
     DO UPDATE SET 
@@ -105,7 +103,7 @@ public class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsReceiptComma
 
         var id = Guid.CreateVersion7();
 
-        string docNo = request.DocumentNo;
+        string docNo = request.DocumentNo ?? "";
 
         if (string.IsNullOrEmpty(docNo))
         {

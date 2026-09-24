@@ -101,7 +101,6 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
         {
             PostingDate = DateTime.UtcNow,
             DocumentDate = DateTime.UtcNow,
-            PeriodId = 1,
             Note = "Note",
             Reason = "Reason",
             Status = DocumentStatus.DRAFT,
@@ -197,7 +196,6 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
             {
                 DocumentId = inserted.DocumentId,
                 DocumentDate = DateTime.UtcNow.AddDays(1),
-                PeriodId = periodId,
                 Note = "Note updated",
                 PostingDate = DateTime.UtcNow.AddDays(2),
                 Reason = "Lý do updated",
@@ -402,7 +400,6 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
             {
                 DocumentId = inserted.DocumentId,
                 DocumentDate = DateTime.UtcNow.AddDays(1),
-                PeriodId = periodId,
                 Note = "Note updated",
                 PostingDate = DateTime.UtcNow.AddDays(2),
                 Reason = "Lý do updated",
@@ -532,7 +529,7 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
             string testBalanceSql = @"
             SELECT COUNT(1) FROM inventory_balances
             WHERE warehouse_id = @WarehouseId AND product_id = @ProductId AND unit_id = @UnitId
-            AND quantity = @Quantity AND amount = @Amount;
+            AND quantity = @Quantity;
             ";
 
             int line1BalanceCount = await dbSession.Connection.ExecuteScalarAsync<int>(testBalanceSql, new
@@ -541,7 +538,7 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
                 ProductId = updateCommand.Lines[0].ProductId,
                 UnitId = updateCommand.Lines[0].UnitId,
                 Quantity = 0,
-                Amount = 0,
+                // Amount = 0,
             });
 
             Assert.Equal(1, line1BalanceCount);
@@ -552,7 +549,7 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
                 ProductId = updateCommand.Lines[1].ProductId,
                 UnitId = updateCommand.Lines[1].UnitId,
                 Quantity = 0,
-                Amount = 0,
+                // Amount = 0,
             });
 
             Assert.Equal(1, line2BalanceCount);
@@ -671,7 +668,6 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
             {
                 DocumentId = inserted.DocumentId,
                 DocumentDate = DateTime.UtcNow,
-                PeriodId = periodId,
                 Note = "Note",
                 PostingDate = DateTime.UtcNow.AddDays(1),
                 Reason = "Lý do",
@@ -798,7 +794,7 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
             string testBalanceSql = @"
             SELECT COUNT(1) FROM inventory_balances
             WHERE warehouse_id = @WarehouseId AND product_id = @ProductId AND unit_id = @UnitId
-            AND quantity = @Quantity AND amount = @Amount;
+            AND quantity = @Quantity;
             ";
 
             // Product1 balance
@@ -808,7 +804,7 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
                 ProductId = updateCommand.Lines[0].ProductId,
                 UnitId = updateCommand.Lines[0].UnitId,
                 Quantity = updateCommand.Lines[0].ActualQuantity,
-                Amount = updateCommand.Lines[0].ActualQuantity * updateCommand.Lines[0].UnitPrice,
+                // Amount = updateCommand.Lines[0].ActualQuantity * updateCommand.Lines[0].UnitPrice,
             });
 
             Assert.Equal(1, line1BalanceCount);
@@ -820,7 +816,7 @@ public class UpdateGoodsIssueTests : IClassFixture<ApplicationFixture>, IAsyncLi
                 ProductId = updateCommand.Lines[1].ProductId,
                 UnitId = updateCommand.Lines[1].UnitId,
                 Quantity = 0,
-                Amount = 0,
+                // Amount = 0,
             });
 
             Assert.Equal(1, line2BalanceCount);

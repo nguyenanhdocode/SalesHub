@@ -75,7 +75,7 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
     updated AS (
         UPDATE inventory_balances AS ib
         SET quantity = ib.quantity - lines.quantity
-        , amount = ib.amount - lines.amount
+        --, amount = ib.amount - lines.amount
         FROM lines
         WHERE lines.warehouse_id = ib.warehouse_id AND lines.product_id = ib.product_id
         AND lines.unit_id = ib.unit_id
@@ -104,7 +104,7 @@ public class CreateGoodsIssueHandler : IRequestHandler<CreateGoodsIssueCommand, 
 
         var id = Guid.CreateVersion7();
 
-        string docNo = request.DocumentNo;
+        string? docNo = request.DocumentNo;
 
         if (string.IsNullOrEmpty(docNo))
         {
